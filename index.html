@@ -1,3 +1,8 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1a2332">
 <title>ExpenseApp</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -180,6 +185,55 @@ tr:not(.sel):hover td{background:var(--bs)}
 .toast.ok{background:#27ae60}
 .toast.err{background:#c0392b}
 .toast.warn{background:#e67e22}
+/* ── BOTTOM NAV (mobile only) ─────────────────────────── */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:#1a2332;border-top:1px solid rgba(255,255,255,.1);z-index:200;flex-direction:row;align-items:stretch}
+body.dark .bottom-nav{background:#0f1724}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:#7f8fa4;font-size:10px;font-weight:500;transition:color .15s;padding:6px 0;-webkit-tap-highlight-color:transparent}
+.bn-item .bn-ico{font-size:20px;line-height:1}
+.bn-item.active{color:#2980b9}
+.bn-item.active .bn-ico{filter:drop-shadow(0 0 4px rgba(41,128,185,.5))}
+/* ── MOBILE RESPONSIVE ────────────────────────────────── */
+@media(max-width:768px){
+  body{height:100dvh;overflow:hidden}
+  .shell{height:100dvh}
+  .nav{display:none}
+  .bottom-nav{display:flex}
+  .content{padding-bottom:60px}
+  .page{padding:8px 10px;gap:6px}
+  /* stats: 2x2 + 1 row */
+  .stat-row{grid-template-columns:repeat(2,1fr);gap:6px}
+  .stat-row .stat:last-child{grid-column:1/-1}
+  .stat-val{font-size:16px}
+  /* chart */
+  .chart-card{padding:8px 10px}
+  .chart-hint{display:none}
+  .ctog{gap:3px}
+  .ctbtn{padding:3px 7px;font-size:10px}
+  /* toolbar */
+  .toolbar{padding:7px 8px;gap:5px;border-radius:9px}
+  .btn{padding:8px 11px;font-size:12px;gap:4px}
+  .t-space{display:none}
+  .rec-count{margin-left:auto}
+  /* table */
+  .tbl-wrap{border-radius:9px}
+  table{table-layout:auto;min-width:540px}
+  /* modal → bottom sheet */
+  .overlay{align-items:flex-end}
+  .modal{width:100%;max-width:100%;border-radius:18px 18px 0 0;max-height:92dvh;overflow-y:auto}
+  .form-grid{grid-template-columns:1fr}
+  .f-field.full{grid-column:1}
+  /* toast above bottom nav */
+  .toast{bottom:72px;right:10px;left:10px;max-width:none;text-align:center}
+  /* settings */
+  .s-section{padding:12px}
+  /* comparison */
+  .comp-filters{gap:8px}
+  .cf-div{display:none}
+  .cf-grp{min-width:calc(50% - 8px)}
+  /* topbar */
+  .topbar{padding:8px 12px}
+  .topbar-title{font-size:13px}
+}
 </style>
 
 <div class="shell">
@@ -325,6 +379,13 @@ tr:not(.sel):hover td{background:var(--bs)}
   </div>
 </div>
 
+<nav class="bottom-nav">
+  <div class="bn-item active" id="bn-dashboard" onclick="go('dashboard')"><span class="bn-ico">📊</span>Dashboard</div>
+  <div class="bn-item" id="bn-records" onclick="go('records')"><span class="bn-ico">📋</span>Records</div>
+  <div class="bn-item" id="bn-comparison" onclick="go('comparison')"><span class="bn-ico">📈</span>Compare</div>
+  <div class="bn-item" id="bn-settings" onclick="go('settings')"><span class="bn-ico">⚙️</span>Settings</div>
+</nav>
+
 <div class="overlay" id="addOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-hdr"><span class="modal-title">＋ Add Record</span><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -438,8 +499,10 @@ var PAGE_INFO={
 };
 function go(page){
   document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.bn-item').forEach(function(el){el.classList.remove('active');});
   document.querySelectorAll('.page').forEach(function(el){el.classList.remove('active');});
   document.getElementById('nav-'+page).classList.add('active');
+  document.getElementById('bn-'+page).classList.add('active');
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('pgTitle').textContent=PAGE_INFO[page][0];
   document.getElementById('pgSub').textContent=PAGE_INFO[page][1];
