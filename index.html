@@ -883,6 +883,16 @@ async function processRows(headers,dataRows){
   if(saved&&Array.isArray(saved))saved.forEach(function(r,i){if(r&&r.id)newRows[i].id=r.id;});
   newRows.forEach(function(r){records.unshift(r);});
   saveR();applyFilters();
+  // Auto-update categories and accounts from imported data
+  var newCats=newRows.map(function(r){return r.category;}).filter(function(c){return c&&c!=='Uncategorized';});
+  var newAccs=newRows.map(function(r){return r.account;}).filter(function(a){return a&&a!=='—';});
+  var addedCats=newCats.filter(function(c){return !S.categories.includes(c);});
+  var addedAccs=newAccs.filter(function(a){return !S.accounts.includes(a);});
+  if(addedCats.length||addedAccs.length){
+    addedCats.forEach(function(c){if(!S.categories.includes(c))S.categories.push(c);});
+    addedAccs.forEach(function(a){if(!S.accounts.includes(a))S.accounts.push(a);});
+    saveS();
+  }
   if(skipped>0)toast('Imported '+imported+' ✓  skipped '+skipped+(firstBadDate?' (date "'+firstBadDate+'" unreadable)':''),'warn');
   else toast('Imported '+imported+' rows → saved to database ✓','ok');
 }
