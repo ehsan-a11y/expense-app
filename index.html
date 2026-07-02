@@ -458,7 +458,7 @@ function fmtAmt(v){
 function mLabel(ym){var p=ym.split('-');return new Date(+p[0],+p[1]-1,1).toLocaleDateString('en-US',{month:'short',year:'2-digit'});}
 function loadS(){try{var s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s)Object.assign(S,s);}catch(e){}}
 function saveS(){localStorage.setItem(SKEY,JSON.stringify(S));apiCall('/api/settings',{method:'POST',body:JSON.stringify({categories:S.categories,accounts:S.accounts,currency:S.currency,numFmt:S.numFmt,symPos:S.symPos,dark:S.dark})});}
-async function loadSRemote(){var r=await apiCall('/api/settings');if(!r||!r.categories)return;if(r.categories&&r.categories.length)S.categories=r.categories;if(r.accounts&&r.accounts.length)S.accounts=r.accounts;if(r.currency)S.currency=r.currency;if(r.numFmt)S.numFmt=r.numFmt;if(r.symPos)S.symPos=r.symPos;if(typeof r.dark==='boolean')S.dark=r.dark;localStorage.setItem(SKEY,JSON.stringify(S));}
+async function loadSRemote(){var r=await apiCall('/api/settings');if(!r)return;if(Array.isArray(r.categories)&&r.categories.length>0)S.categories=r.categories;if(Array.isArray(r.accounts)&&r.accounts.length>0)S.accounts=r.accounts;if(r.currency)S.currency=r.currency;if(r.numFmt)S.numFmt=r.numFmt;if(r.symPos)S.symPos=r.symPos;if(typeof r.dark==='boolean')S.dark=r.dark;localStorage.setItem(SKEY,JSON.stringify(S));}
 
 function sample(){return[
   {time:'2024-01-10',type:'Income',amount:5000,category:'Salary',account:'Bank',note:'January salary'},
