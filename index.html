@@ -129,6 +129,14 @@ tr:not(.sel):hover td{background:var(--bs)}
 .cf-div{width:1px;height:38px;background:var(--bd);flex-shrink:0;align-self:center}
 .cf-reset{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;align-self:flex-end;font-family:inherit;transition:all .15s}
 .cf-reset:hover{background:#e74c3c;color:#fff}
+.comp-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex-shrink:0}
+.cs-card{border-radius:11px;padding:12px 16px;display:flex;flex-direction:column;gap:4px}
+.cs-card.total{background:linear-gradient(135deg,#1a2332,#2c3e57);border:1px solid #3a5070}
+.cs-card.income{background:linear-gradient(135deg,#1a3a2a,#1e4d38);border:1px solid #2e7d52}
+.cs-card.expense{background:linear-gradient(135deg,#3a1a1a,#4d1e1e);border:1px solid #7d2e2e}
+.cs-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.6)}
+.cs-val{font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-sub{font-size:11px;color:rgba(255,255,255,.5)}
 .comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding-bottom:10px}
 .cat-card{background:var(--bp);border:1.5px solid var(--bd);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .2s,border-color .2s}
 .cat-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.09);border-color:#aecde8}
@@ -359,6 +367,7 @@ body.dark .bottom-nav{background:#0f1724}
         <div class="cf-div"></div>
         <button class="cf-reset" onclick="resetComp()">↺ Reset</button>
       </div>
+      <div id="compSummary"></div>
       <div class="comp-grid" id="compGrid"></div>
     </div>
 
@@ -1038,6 +1047,15 @@ function renderComp(){
            inRange.filter(function(r){return r.category===a;}).reduce(function(s,r){return s+r.amount;},0);
   });
   var grid=document.getElementById('compGrid');
+  var totalAmt=inRange.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var incAmt=inRange.filter(function(r){return r.type==='Income';}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var expAmt=inRange.filter(function(r){return r.type==='Expense';}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var recCount=inRange.length;
+  var summary=document.getElementById('compSummary');
+  summary.className='comp-summary';
+  summary.innerHTML='<div class="cs-card total"><div class="cs-lbl">Total Amount</div><div class="cs-val">'+fmtAmt(totalAmt)+'</div><div class="cs-sub">'+recCount+' record'+(recCount!==1?'s':'')+'</div></div>'
+    +(tf!=='expense'?'<div class="cs-card income"><div class="cs-lbl">Total Income</div><div class="cs-val">'+fmtAmt(incAmt)+'</div><div class="cs-sub">'+inRange.filter(function(r){return r.type==='Income';}).length+' records</div></div>':'<div></div>')
+    +(tf!=='income'?'<div class="cs-card expense"><div class="cs-lbl">Total Expenses</div><div class="cs-val">'+fmtAmt(expAmt)+'</div><div class="cs-sub">'+inRange.filter(function(r){return r.type==='Expense';}).length+' records</div></div>':'<div></div>');
   if(!cats.length){grid.innerHTML='<div class="comp-empty">No data for the selected filters</div>';return;}
   var isSingle=months.length===1;
   var pr=monthsRange(months);
