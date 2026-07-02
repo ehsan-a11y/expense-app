@@ -33,11 +33,24 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const body = req.body;
       for (const [k, v] of Object.entries(body)) {
-        const val = JSON.stringify(v);
-        await sql`
-          INSERT INTO app_settings (key, value) VALUES (${k}, ${val})
-          ON CONFLICT (key) DO UPDATE SET value = ${val}
-        `;
+        if (k === 'categories' || k === 'accounts') {
+          // Merge: union of existing DB list + incoming list (preserve all from both devices)
+          const existing = await sql`SELECT value FROM app_settings WHERE key = ${k}`;
+          let current = [];
+          if (existing.length) { try { current = JSON.parse(existing[0].value); } catch {} }
+          const merged = Array.from(new Set([...current, ...v]));
+          const val = JSON.stringify(merged);
+          await sql`
+            INSERT INTO app_settings (key, value) VALUES (${k}, ${val})
+            ON CONFLICT (key) DO UPDATE SET value = ${val}
+          `;
+        } else {
+          const val = JSON.stringify(v);
+          await sql`
+            INSERT INTO app_settings (key, value) VALUES (${k}, ${val})
+            ON CONFLICT (key) DO UPDATE SET value = ${val}
+          `;
+        }
       }
       return res.status(200).json({ ok: true });
     }

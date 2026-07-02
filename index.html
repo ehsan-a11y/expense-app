@@ -1102,6 +1102,8 @@ async function syncFromServer(silent){
   if(!silent)setSyncStatus('syncing');
   var remote=await apiCall('/api/records');
   if(!remote||!Array.isArray(remote)){setSyncStatus('err');return;}
+  // Also sync settings (categories/accounts) from DB
+  await loadSRemote();
   var changed=JSON.stringify(remote)!==JSON.stringify(records);
   records=remote;
   localStorage.setItem(STORE,JSON.stringify(records));
