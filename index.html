@@ -154,9 +154,12 @@ tr:not(.sel):hover td{background:var(--bs)}
 .comp-empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--ts);font-size:13px}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
 .overlay.open{display:flex}
-.modal{background:var(--bp);border-radius:12px;border:1px solid var(--bd);width:390px;max-width:95vw;display:flex;flex-direction:column;max-height:90vh}
+.modal{background:var(--bp);border-radius:12px;border:1px solid var(--bd);width:390px;max-width:95vw;display:flex;flex-direction:column;height:auto;max-height:88vh}
 .modal-hdr{padding:12px 16px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);background:var(--bp);border-radius:12px 12px 0 0}
-.modal-body{padding:14px 16px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.modal-body{padding:14px 16px 20px;overflow-y:scroll;flex:1;min-height:0;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#2980b9 var(--bs)}
+.modal-body::-webkit-scrollbar{width:5px}
+.modal-body::-webkit-scrollbar-track{background:var(--bs);border-radius:3px}
+.modal-body::-webkit-scrollbar-thumb{background:#2980b9;border-radius:3px}
 .modal-footer{display:none}
 .modal-title{font-size:14px;font-weight:600}
 .modal-close{background:none;border:none;cursor:pointer;font-size:17px;color:var(--ts);padding:2px 6px;border-radius:5px;line-height:1;font-family:inherit}
@@ -223,7 +226,7 @@ body.dark .bottom-nav{background:#0f1724}
   table{table-layout:auto;min-width:540px}
   /* modal → bottom sheet */
   .overlay{align-items:flex-end}
-  .modal{width:100%;max-width:100%;border-radius:18px 18px 0 0;max-height:80dvh}
+  .modal{width:100%;max-width:100%;border-radius:18px 18px 0 0;max-height:80vh;height:80vh}
   .modal-hdr{border-radius:18px 18px 0 0;padding:14px 16px}
   .modal-body{padding:12px 16px 24px}
   .form-grid{grid-template-columns:1fr}
