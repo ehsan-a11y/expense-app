@@ -444,8 +444,8 @@ var STORE='exp_v2',SKEY='expS_v2';
 var CAT_COLORS=['#3498db','#e67e22','#2ecc71','#9b59b6','#1abc9c','#e74c3c','#f39c12','#34495e','#16a085','#8e44ad','#2980b9','#d35400'];
 var records=[],selRow=null,sortCol=null,sortDir=1,chartType='bar',chartHitAreas=[];
 var S={dark:false,currency:'$',numFmt:'2',symPos:'before',
-  categories:['Food','Transport','Rent','Utilities','Shopping','Health','Freelance','Salary','Entertainment','Education'],
-  accounts:['Cash','Card','Bank','Wallet']};
+  categories:[],
+  accounts:[]};
 var RF={active:false,from:'',to:'',cat:'',label:''};
 
 function pad(n){return String(n).padStart(2,'0');}
