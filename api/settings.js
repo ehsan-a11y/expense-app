@@ -55,6 +55,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (req.method === 'DELETE') {
+      const keys = (req.query.keys || '').split(',').filter(Boolean);
+      if (keys.length) {
+        for (const k of keys) await sql`DELETE FROM app_settings WHERE key = ${k}`;
+      } else {
+        await sql`DELETE FROM app_settings`;
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error(err);

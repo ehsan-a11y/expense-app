@@ -983,7 +983,9 @@ function confirmClear(){document.getElementById('confCount').textContent=records
 async function clearAll(){
   document.getElementById('confOverlay').classList.remove('open');
   await apiCall('/api/records?all=1',{method:'DELETE'});
-  records=[];saveR();applyFilters();toast('All data cleared','ok');
+  await apiCall('/api/settings?keys=categories,accounts',{method:'DELETE'});
+  S.categories=[];S.accounts=[];saveS();
+  records=[];saveR();applyFilters();renderTags('cat');renderTags('acc');toast('All data cleared','ok');
 }
 
 // ─── RECORDS TABLE ────────────────────────────────────────────────────────────
