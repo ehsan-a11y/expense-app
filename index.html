@@ -400,7 +400,7 @@ body.dark .bottom-nav{background:#0f1724}
 
 <div class="overlay" id="addOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <div class="modal-hdr"><span class="modal-title">＋ Add Record</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-hdr"><span class="modal-title">＋ Add Record</span><div style="display:flex;gap:6px;align-items:center"><button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button><button class="mbtn mbtn-save" onclick="saveRecord()">💾 Save</button><button class="modal-close" onclick="closeModal()">✕</button></div></div>
     <div class="modal-body"><div class="form-grid">
       <div class="f-field"><label>Date</label><input type="date" id="fTime"><div class="f-err" id="eTime">Required</div></div>
       <div class="f-field"><label>Type</label><select id="fType"><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
@@ -409,7 +409,6 @@ body.dark .bottom-nav{background:#0f1724}
       <div class="f-field"><label>Account</label><div class="ac-wrap"><input type="text" id="fAcc" placeholder="e.g. Cash" autocomplete="off" oninput="acFilter('acc')" onfocus="acShow('acc')" onblur="setTimeout(function(){acHide('acc');},160)"><div class="ac-list" id="acAcc"></div></div></div>
       <div class="f-field full"><label>Note</label><textarea id="fNote" placeholder="Optional…"></textarea></div>
     </div></div>
-    <div class="modal-footer"><button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button><button class="mbtn mbtn-save" onclick="saveRecord()">💾 Save</button></div>
   </div>
 </div>
 
