@@ -774,8 +774,8 @@ async function readXLSX(buf){
     var p=new DOMParser().parseFromString(ssXml,'text/xml');
     p.querySelectorAll('si').forEach(function(si){ss.push(si.textContent);});
   }
-  var sheetKey=Object.keys(files).find(function(k){return /xl\/worksheets\/sheet\d+\.xml/.test(k);});
-  if(!sheetKey)throw new Error('No worksheet found in Excel file');
+  var sheetKey=Object.keys(files).find(function(k){return /xl[\/\\]worksheets[\/\\]sheet/i.test(k)&&/\.xml$/i.test(k);});
+  if(!sheetKey){var allKeys=Object.keys(files).join(', ');throw new Error('No worksheet found. Files: '+allKeys);}
   var shXml=files[sheetKey];
   var sh=new DOMParser().parseFromString(shXml,'text/xml');
   var rows=[];
@@ -983,9 +983,7 @@ function confirmClear(){document.getElementById('confCount').textContent=records
 async function clearAll(){
   document.getElementById('confOverlay').classList.remove('open');
   await apiCall('/api/records?all=1',{method:'DELETE'});
-  await apiCall('/api/settings?keys=categories,accounts',{method:'DELETE'});
-  S.categories=[];S.accounts=[];saveS();
-  records=[];saveR();applyFilters();renderTags('cat');renderTags('acc');toast('All data cleared','ok');
+  records=[];saveR();applyFilters();toast('All records cleared','ok');
 }
 
 // ─── RECORDS TABLE ────────────────────────────────────────────────────────────
