@@ -1098,7 +1098,7 @@ function startSyncLoop(){
   clearInterval(syncTimer);
   syncTimer=setInterval(function(){
     if(document.visibilityState==='visible')syncFromServer(true);
-  },30000);
+  },5000);
 }
 
 init();
