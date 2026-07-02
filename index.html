@@ -1053,9 +1053,8 @@ function renderComp(){
   var recCount=inRange.length;
   var summary=document.getElementById('compSummary');
   summary.className='comp-summary';
-  summary.innerHTML='<div class="cs-card total"><div class="cs-lbl">Total Amount</div><div class="cs-val">'+fmtAmt(totalAmt)+'</div><div class="cs-sub">'+recCount+' record'+(recCount!==1?'s':'')+'</div></div>'
-    +(tf!=='expense'?'<div class="cs-card income"><div class="cs-lbl">Total Income</div><div class="cs-val">'+fmtAmt(incAmt)+'</div><div class="cs-sub">'+inRange.filter(function(r){return r.type==='Income';}).length+' records</div></div>':'<div></div>')
-    +(tf!=='income'?'<div class="cs-card expense"><div class="cs-lbl">Total Expenses</div><div class="cs-val">'+fmtAmt(expAmt)+'</div><div class="cs-sub">'+inRange.filter(function(r){return r.type==='Expense';}).length+' records</div></div>':'<div></div>');
+  var expCount=inRange.filter(function(r){return r.type==='Expense';}).length;
+  summary.innerHTML='<div class="cs-card expense"><div class="cs-lbl">Total Expenses</div><div class="cs-val">'+fmtAmt(expAmt)+'</div><div class="cs-sub">'+expCount+' record'+(expCount!==1?'s':'')+'</div></div>';
   if(!cats.length){grid.innerHTML='<div class="comp-empty">No data for the selected filters</div>';return;}
   var isSingle=months.length===1;
   var pr=monthsRange(months);
