@@ -256,7 +256,13 @@ body.dark .bottom-nav{background:#0f1724}
   <div class="content">
     <div class="topbar">
       <div><div class="topbar-title" id="pgTitle">Dashboard</div><div class="topbar-sub" id="pgSub">Overview of your expenses</div></div>
-      <div style="font-size:11px;color:var(--ts)" id="pgCount"></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="syncBadge" style="display:none;align-items:center;gap:4px;font-size:10px;color:var(--ts);background:var(--bs);border:1px solid var(--bd);padding:3px 8px;border-radius:20px">
+          <span id="syncDot" style="width:6px;height:6px;border-radius:50%;background:#27ae60;flex-shrink:0"></span>
+          <span id="syncLbl">Synced</span>
+        </div>
+        <div style="font-size:11px;color:var(--ts)" id="pgCount"></div>
+      </div>
     </div>
 
     <div class="page active" id="page-dashboard">
@@ -470,6 +476,8 @@ async function init(){
     if(!records.length)records=sample();
   }
   applyUI();go('dashboard');
+  setSyncStatus(DB_OK?'ok':'err');
+  startSyncLoop();
 }
 function saveR(){localStorage.setItem(STORE,JSON.stringify(records));}
 function applyUI(){
@@ -1050,6 +1058,48 @@ function renderComp(){
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(function(){t.classList.remove('show');},3800);}
 window.addEventListener('resize',function(){var pg=document.getElementById('page-dashboard');if(pg.classList.contains('active')){var res=getDashRows();buildChart(res.rows,res.from,res.to);}});
+
+// ─── REAL-TIME SYNC ───────────────────────────────────────────────────────────
+var lastSyncTime=0,syncTimer=null;
+function setSyncStatus(state){
+  var badge=document.getElementById('syncBadge');
+  var dot=document.getElementById('syncDot');
+  var lbl=document.getElementById('syncLbl');
+  if(!badge)return;
+  badge.style.display='flex';
+  if(state==='syncing'){dot.style.background='#e67e22';lbl.textContent='Syncing…';}
+  else if(state==='ok'){dot.style.background='#27ae60';var now=new Date();lbl.textContent='Synced '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+  else{dot.style.background='#e74c3c';lbl.textContent='Offline';}
+}
+async function syncFromServer(silent){
+  if(!silent)setSyncStatus('syncing');
+  var remote=await apiCall('/api/records');
+  if(!remote||!Array.isArray(remote)){setSyncStatus('err');return;}
+  var changed=JSON.stringify(remote)!==JSON.stringify(records);
+  records=remote;
+  localStorage.setItem(STORE,JSON.stringify(records));
+  lastSyncTime=Date.now();
+  setSyncStatus('ok');
+  if(changed){
+    var active=document.querySelector('.page.active');
+    var pg=active?active.id.replace('page-',''):'';
+    if(pg==='dashboard')renderDash();
+    else if(pg==='records')applyFilters();
+    else if(pg==='comparison'){fillCatDrop();renderComp();}
+    if(!silent)toast('Data synced from server','ok');
+  }
+}
+// Refresh when user comes back to the tab / app
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&Date.now()-lastSyncTime>10000)syncFromServer(true);
+});
+// Poll every 30 s while the page is open
+function startSyncLoop(){
+  clearInterval(syncTimer);
+  syncTimer=setInterval(function(){
+    if(document.visibilityState==='visible')syncFromServer(true);
+  },30000);
+}
 
 init();
 </script>
