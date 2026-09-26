@@ -1,3 +1,4 @@
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -50,6 +51,7 @@ body.dark .rec-bar{background:linear-gradient(90deg,#1a3a5e,#1e2736);border-colo
 .stat-val{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .stat-sub{font-size:10px;color:rgba(255,255,255,.65)}
 #page-dashboard{overflow-y:auto}
+#page-budget{overflow-y:auto}
 .chart-card{background:var(--bp);border:1px solid var(--bd);border-radius:11px;padding:10px 14px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:6px}
 .chart-title{font-size:12px;font-weight:600}
@@ -160,6 +162,27 @@ tr:not(.sel):hover td{background:var(--bs)}
 .cat-single-sub{font-size:11px;color:var(--ts);text-align:center}
 .cat-zero{font-size:11px;color:var(--tt);text-align:center;padding:5px 0}
 .comp-empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--ts);font-size:13px}
+.budget-total-hint{font-size:11px;color:var(--ts);font-weight:600}
+.budget-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding-bottom:4px}
+.budget-item{background:var(--bp);border:1.5px solid var(--bd);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;transition:box-shadow .2s,border-color .2s}
+.budget-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.09);border-color:#aecde8}
+.bi-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bi-name{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bi-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.bi-pct{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0;white-space:nowrap}
+.bi-bar-bg{height:9px;border-radius:5px;background:#e8ecf0;overflow:hidden}
+body.dark .bi-bar-bg{background:#2e3a4e}
+.bi-bar{height:100%;border-radius:5px;transition:width .5s ease}
+.bi-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px}
+.bi-amt{color:var(--ts);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bi-amt b{color:var(--tp);font-weight:700}
+.bi-status{padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.bi-status.ok{background:#e8f5e9;color:#27ae60}
+.bi-status.warn{background:#fdf2e3;color:#e67e22}
+.bi-status.over{background:#fde8e8;color:#c0392b}
+body.dark .bi-status.ok{background:#16351f;color:#4ade80}
+body.dark .bi-status.warn{background:#3a2a12;color:#fbbf24}
+body.dark .bi-status.over{background:#3a1a1a;color:#f87171}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
 .overlay.open{display:flex}
 .modal{background:var(--bp);border-radius:12px;border:1px solid var(--bd);width:390px;max-width:95vw;display:flex;flex-direction:column;height:auto;max-height:88vh}
@@ -269,6 +292,7 @@ body.dark .bottom-nav{background:#0f1724}
       <div class="nav-sec">Main</div>
       <div class="nav-item active" id="nav-dashboard" onclick="go('dashboard')"><span class="ni">📊</span> Dashboard</div>
       <div class="nav-item" id="nav-records" onclick="go('records')"><span class="ni">📋</span> Records</div>
+      <div class="nav-item" id="nav-budget" onclick="go('budget')"><span class="ni">🎯</span> Budget</div>
       <div class="nav-item" id="nav-comparison" onclick="go('comparison')"><span class="ni">📈</span> Comparison</div>
     </div>
     <div class="nav-bottom">
@@ -304,11 +328,15 @@ body.dark .bottom-nav{background:#0f1724}
         </div>
         <div class="chart-wrap"><canvas id="catCanvas"></canvas></div>
       </div>
-      <div class="chart-card" id="budgetCard" style="display:none">
+    </div>
+
+    <div class="page" id="page-budget">
+      <div class="chart-card">
         <div class="chart-hdr">
           <span class="chart-title">Budget progress — <span id="budgetMonthLbl"></span></span>
+          <span class="budget-total-hint" id="budgetTotalHint"></span>
         </div>
-        <div class="cm-list" id="budgetList" style="overflow-y:auto"></div>
+        <div class="budget-grid" id="budgetList"></div>
       </div>
     </div>
 
@@ -422,6 +450,7 @@ body.dark .bottom-nav{background:#0f1724}
 <nav class="bottom-nav">
   <div class="bn-item active" id="bn-dashboard" onclick="go('dashboard')"><span class="bn-ico">📊</span>Dashboard</div>
   <div class="bn-item" id="bn-records" onclick="go('records')"><span class="bn-ico">📋</span>Records</div>
+  <div class="bn-item" id="bn-budget" onclick="go('budget')"><span class="bn-ico">🎯</span>Budget</div>
   <div class="bn-item" id="bn-comparison" onclick="go('comparison')"><span class="bn-ico">📈</span>Compare</div>
   <div class="bn-item" id="bn-settings" onclick="go('settings')"><span class="bn-ico">⚙️</span>Settings</div>
 </nav>
@@ -581,27 +610,45 @@ function updateBudgetHint(){
   }
 }
 function renderBudgets(rows){
-  var bcard=document.getElementById('budgetCard');
-  if(!bcard)return;
-  var entries=Object.entries(S.budgets||{}).filter(function(e){return e[1]>0;});
-  if(!entries.length){bcard.style.display='none';return;}
-  bcard.style.display='flex';
+  var listEl=document.getElementById('budgetList');
+  if(!listEl)return;
   document.getElementById('budgetMonthLbl').textContent=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var entries=Object.entries(S.budgets||{}).filter(function(e){return e[1]>0;});
+  if(!entries.length){
+    listEl.innerHTML='<div class="comp-empty">No budgets set yet. Go to Settings → Monthly Budgets to add one.</div>';
+    document.getElementById('budgetTotalHint').textContent='';
+    return;
+  }
   var spent={};
   rows.forEach(function(r){if(r.type==='Expense')spent[r.category]=(spent[r.category]||0)+parseFloat(r.amount||0);});
   entries.sort(function(a,b){return((spent[b[0]]||0)/b[1])-((spent[a[0]]||0)/a[1]);});
+  var catColorIdx={};
+  (S.categories&&S.categories.length?S.categories:entries.map(function(e){return e[0];})).forEach(function(c,i){catColorIdx[c]=i;});
+  var totalBudget=0,totalSpent=0;
   document.getElementById('budgetList').innerHTML=entries.map(function(e){
     var cat=e[0],budget=e[1],used=spent[cat]||0;
+    totalBudget+=budget;totalSpent+=used;
     var pct=budget>0?(used/budget)*100:0;
-    var color=pct>=100?'#e74c3c':pct>=80?'#e67e22':'#27ae60';
-    return'<div class="cm-row no-data"><span class="cm-name" style="width:auto;min-width:88px;flex-shrink:0">'+cat+'</span><div class="cmbar-bg"><div class="cmbar" style="width:'+Math.min(pct,100).toFixed(1)+'%;background:'+color+'"></div></div><span class="cm-val" style="color:'+color+';min-width:130px">'+fmtAmt(used)+' / '+fmtAmt(budget)+'</span></div>';
+    var remaining=budget-used;
+    var deltaLbl=remaining>=0?fmtAmt(remaining)+' left':fmtAmt(Math.abs(remaining))+' over';
+    var dotColor=CAT_COLORS[(catColorIdx[cat]||0)%CAT_COLORS.length];
+    var barColor=pct>=100?'#e74c3c':pct>=80?'#e67e22':'#27ae60';
+    var statusClass=pct>=100?'over':pct>=80?'warn':'ok';
+    var statusLbl=pct>=100?'Over budget':pct>=80?'Near limit':'On track';
+    return'<div class="budget-item">'+
+      '<div class="bi-top"><div class="bi-name"><span class="bi-dot" style="background:'+dotColor+'"></span>'+cat+'</div><span class="bi-pct" style="color:'+barColor+'">'+deltaLbl+'</span></div>'+
+      '<div class="bi-bar-bg"><div class="bi-bar" style="width:'+Math.min(pct,100).toFixed(1)+'%;background:'+barColor+'"></div></div>'+
+      '<div class="bi-bottom"><span class="bi-amt"><b>'+fmtAmt(used)+'</b> of '+fmtAmt(budget)+'</span><span class="bi-status '+statusClass+'">'+statusLbl+'</span></div>'+
+    '</div>';
   }).join('');
+  document.getElementById('budgetTotalHint').textContent=fmtAmt(totalSpent)+' of '+fmtAmt(totalBudget)+' spent';
 }
 
 var PAGE_INFO={
   dashboard:['Dashboard','Overview of your expenses'],
   records:['Records','Browse and manage your entries'],
   comparison:['Comparison','Category breakdown by month'],
+  budget:['Budget','Track spending against your monthly limits'],
   settings:['Settings','Preferences and data management']
 };
 function go(page){
@@ -616,6 +663,7 @@ function go(page){
   if(page==='dashboard')renderDash();
   else if(page==='records')applyFilters();
   else if(page==='comparison'){fillCatDrop();renderComp();}
+  else if(page==='budget')renderBudgets(getDashRows().rows);
   else applyUI();
 }
 function drillTo(cat,from,to,label){RF={active:true,from:from,to:to,cat:cat,label:label};go('records');}
@@ -652,7 +700,6 @@ function renderDash(){
     mkStat('Balance',bal>=0?'c-purple':'c-red',fmtAmt(bal),'Net')+
     mkStat('Categories','c-teal',String(cats),'Unique');
   buildChart(rows,res.from,res.to);
-  renderBudgets(rows);
 }
 function mkStat(lbl,cls,val,sub){
   return'<div class="stat '+cls+'"><div class="stat-lbl">'+lbl+'</div><div class="stat-val">'+val+'</div><div class="stat-sub">'+sub+'</div></div>';
@@ -1216,6 +1263,7 @@ async function syncFromServer(silent){
     if(pg==='dashboard')renderDash();
     else if(pg==='records')applyFilters();
     else if(pg==='comparison'){fillCatDrop();renderComp();}
+    else if(pg==='budget')renderBudgets(getDashRows().rows);
     if(!silent)toast('Data synced from server','ok');
   }
 }
