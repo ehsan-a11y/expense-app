@@ -70,6 +70,8 @@ body.dark .rec-bar{background:linear-gradient(90deg,#1a3a5e,#1e2736);border-colo
 .btn-imp:hover{filter:brightness(1.1);transform:translateY(-1px)}
 .btn-del{background:linear-gradient(135deg,#c0392b,#a93226);color:#fff;box-shadow:0 2px 5px rgba(192,57,43,.25)}
 .btn-del:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-edit{background:linear-gradient(135deg,#e67e22,#ca6f1e);color:#fff;box-shadow:0 2px 5px rgba(230,126,34,.3)}
+.btn-edit:hover{filter:brightness(1.1);transform:translateY(-1px)}
 .btn-rst{background:var(--bs);color:var(--ts);border:1px solid var(--bd);font-family:inherit}
 .btn-rst:hover{background:var(--bt)}
 #importInput{display:none}
@@ -346,6 +348,7 @@ body.dark .bottom-nav{background:#0f1724}
           <button class="btn btn-add" onclick="openModal()">＋ Add Record</button>
           <button class="btn btn-imp" onclick="document.getElementById('importInput').click()">↑ Import Excel / CSV</button>
           <input type="file" id="importInput" accept=".csv,.xlsx,.xls" onchange="importFile(event)">
+          <button class="btn btn-edit" id="editBtn" style="display:none" onclick="editRecord()">✎ Edit</button>
           <button class="btn btn-del" onclick="deleteRecord()">✕ Delete</button>
           <button class="btn btn-rst" onclick="resetAll()">↺ Reset</button>
           <div class="t-space"></div>
@@ -457,7 +460,7 @@ body.dark .bottom-nav{background:#0f1724}
 
 <div class="overlay" id="addOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <div class="modal-hdr"><span class="modal-title">＋ Add Record</span><div style="display:flex;gap:6px;align-items:center"><button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button><button class="mbtn mbtn-save" onclick="saveRecord()">💾 Save</button><button class="modal-close" onclick="closeModal()">✕</button></div></div>
+    <div class="modal-hdr"><span class="modal-title" id="modalTitle">＋ Add Record</span><div style="display:flex;gap:6px;align-items:center"><button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button><button class="mbtn mbtn-save" onclick="saveRecord()">💾 Save</button><button class="modal-close" onclick="closeModal()">✕</button></div></div>
     <div class="modal-body"><div class="form-grid">
       <div class="f-field"><label>Date</label><input type="date" id="fTime" onchange="updateBudgetHint()"><div class="f-err" id="eTime">Required</div></div>
       <div class="f-field"><label>Type</label><select id="fType" onchange="updateBudgetHint()"><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
@@ -596,7 +599,7 @@ function updateBudgetHint(){
   var budget=cat&&S.budgets?S.budgets[cat]:0;
   if(type!=='Expense'||!cat||!budget){el.className='budget-hint';return;}
   var ym=(dateVal||fmtD(new Date())).substring(0,7);
-  var spent=records.filter(function(r){return r.type==='Expense'&&r.category===cat&&String(r.time).substring(0,7)===ym;}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
+  var spent=records.filter(function(r){return r!==editRec&&r.type==='Expense'&&r.category===cat&&String(r.time).substring(0,7)===ym;}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
   var projected=spent+amt;
   var remaining=budget-projected;
   var p=ym.split('-');
@@ -1090,17 +1093,38 @@ function acPick(t,val){
   if(t==='cat')updateBudgetHint();
 }
 
-function openModal(){
-  var now=new Date();
-  document.getElementById('fTime').value=fmtD(now);
-  document.getElementById('fType').value='Expense';
-  ['fAmount','fCat','fAcc','fNote'].forEach(function(id){document.getElementById(id).value='';});
+var editRec=null;
+function openModal(rec){
+  editRec=rec||null;
+  document.getElementById('modalTitle').textContent=editRec?'✎ Edit Record':'＋ Add Record';
+  document.getElementById('fTime').value=editRec?String(editRec.time).split('T')[0]:fmtD(new Date());
+  document.getElementById('fType').value=editRec?editRec.type:'Expense';
+  document.getElementById('fAmount').value=editRec?editRec.amount:'';
+  document.getElementById('fCat').value=editRec?editRec.category:'';
+  document.getElementById('fAcc').value=editRec&&editRec.account!=='—'?editRec.account:'';
+  document.getElementById('fNote').value=editRec?editRec.note:'';
   document.querySelectorAll('.f-err').forEach(function(el){el.style.display='none';});
   document.getElementById('budgetHint').className='budget-hint';
   document.getElementById('addOverlay').classList.add('open');
+  updateBudgetHint();
   setTimeout(function(){document.getElementById('fAmount').focus();},80);
 }
-function closeModal(){document.getElementById('addOverlay').classList.remove('open');}
+function closeModal(){document.getElementById('addOverlay').classList.remove('open');editRec=null;}
+function selRecordIdx(){
+  var id=parseInt(selRow.getAttribute('data-id'));
+  var idx=id?records.findIndex(function(r){return r.id===id;}):-1;
+  if(idx===-1){
+    var cells=Array.from(selRow.cells).map(function(c){return c.textContent.trim();});
+    idx=records.findIndex(function(r){return String(r.time)===cells[0]&&r.category===cells[3]&&r.account===cells[4];});
+  }
+  return idx;
+}
+function editRecord(){
+  if(!selRow){toast('Select a row first','err');return;}
+  var idx=selRecordIdx();
+  if(idx===-1){toast('Record not found','err');return;}
+  openModal(records[idx]);
+}
 async function saveRecord(){
   var time=document.getElementById('fTime').value;
   var amount=parseFloat(document.getElementById('fAmount').value);
@@ -1112,7 +1136,20 @@ async function saveRecord(){
   if(!ok)return;
   var rec={time:time,type:document.getElementById('fType').value,amount:amount,category:cat,
     account:document.getElementById('fAcc').value.trim()||'—',note:document.getElementById('fNote').value.trim()};
+  var target=editRec;
   closeModal();
+  if(target){
+    var synced=false;
+    if(target.id){
+      var upd=await apiCall('/api/records?id='+target.id,{method:'PUT',body:JSON.stringify(rec)});
+      if(upd&&upd.id){rec=upd;synced=true;}
+    }
+    Object.assign(target,rec);
+    saveR();applyFilters();
+    if(synced)toast('Record updated ✓','ok');
+    else toast('Updated locally — database not reached','warn');
+    return;
+  }
   var saved=await apiCall('/api/records',{method:'POST',body:JSON.stringify(rec)});
   if(saved&&saved[0])rec=saved[0];
   records.unshift(rec);saveR();applyFilters();toast('Record saved to database ✓','ok');
@@ -1142,12 +1179,13 @@ function applyFilters(){
   document.getElementById('pgCount').textContent=rows.length+' records';
   document.getElementById('tblCount').textContent=rows.length;
   var tbody=document.getElementById('tblBody');selRow=null;
+  document.getElementById('editBtn').style.display='none';
   if(!rows.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No records found</td></tr>';return;}
   tbody.innerHTML=rows.map(function(r){
     return'<tr data-id="'+(r.id||'')+'" onclick="selR(this)"><td>'+r.time+'</td><td><span class="badge '+(r.type==='Income'?'badge-i':'badge-e')+'">'+r.type+'</span></td><td>'+fmtAmt(r.amount)+'</td><td>'+r.category+'</td><td>'+r.account+'</td><td>'+r.note+'</td></tr>';
   }).join('');
 }
-function selR(tr){document.querySelectorAll('#tblBody tr').forEach(function(r){r.classList.remove('sel');});tr.classList.add('sel');selRow=tr;}
+function selR(tr){document.querySelectorAll('#tblBody tr').forEach(function(r){r.classList.remove('sel');});tr.classList.add('sel');selRow=tr;document.getElementById('editBtn').style.display='';}
 function sortBy(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}document.querySelectorAll('.sort-ico').forEach(function(el){el.textContent='';});document.getElementById('s-'+col).textContent=sortDir===1?' ▲':' ▼';applyFilters();}
 function resetAll(){sortCol=null;sortDir=1;document.querySelectorAll('.sort-ico').forEach(function(el){el.textContent='';});clearFilter();}
 async function deleteRecord(){

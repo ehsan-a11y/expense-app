@@ -24,7 +24,7 @@ async function getDB() {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -56,6 +56,22 @@ export default async function handler(req, res) {
         inserted.push(row[0]);
       }
       return res.status(201).json(inserted);
+    }
+
+    // PUT — update one record by id (?id=X)
+    if (req.method === 'PUT') {
+      const id = parseInt(req.query.id);
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const r = req.body || {};
+      const row = await sql`
+        UPDATE expense_records
+        SET time = ${r.time}, type = ${r.type || 'Expense'}, amount = ${parseFloat(r.amount)},
+            category = ${r.category || 'Uncategorized'}, account = ${r.account || '—'}, note = ${r.note || ''}
+        WHERE id = ${id}
+        RETURNING id, time, type, amount::float AS amount, category, account, note
+      `;
+      if (!row.length) return res.status(404).json({ error: 'not found' });
+      return res.status(200).json(row[0]);
     }
 
     // DELETE — delete by id (?id=X) or all (?all=1)
