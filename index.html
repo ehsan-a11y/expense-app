@@ -525,7 +525,7 @@ body.dark .bottom-nav{background:#0f1724}
           </div>
           <div style="padding:10px 0 2px;border-top:1px solid var(--bd);margin-top:6px">
             <div class="s-lbl">Email reminders</div>
-            <div class="s-sub" id="emailSub">Add the email addresses that should get the 9 PM reminder. Each person gets their own email.</div>
+            <div class="s-sub" id="emailSub">Add the email addresses that should get the daily 8 AM summary of yesterday. Each person gets their own email.</div>
             <div class="tags" id="emailTags"></div>
             <div class="tag-add"><input type="email" id="emailInput" placeholder="name@example.com" onkeydown="if(event.key==='Enter')addEmail()"><button class="tag-add-btn" onclick="addEmail()">+ Add</button></div>
           </div>
@@ -908,8 +908,8 @@ function resetLevels(){
   S.levels=null;saveS();renderLevelRows();toast('Levels set to automatic','ok');
 }
 // ─── DAILY REMINDER (web push) ────────────────────────────────────────────────
-var PUSH_ON_TXT='Reminder is on: once a day at 9 PM (UAE time), only if you have not added an expense today.';
-var PUSH_OFF_TXT='Get one notification at 9 PM (UAE time) if you have not added an expense that day.';
+var PUSH_ON_TXT='Reminder is on: once a day at 8 AM (UAE time), only if yesterday had no expense.';
+var PUSH_OFF_TXT='Get one notification at 8 AM (UAE time) if you did not add an expense the day before.';
 function pushSupported(){return'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
 function b64ToU8(s){
   var p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(b),out=new Uint8Array(raw.length);
@@ -942,7 +942,7 @@ async function refreshEmailUI(){
   var has=(S.reminderEmails||[]).length>0;
   row.style.display=emailEnabled&&has?'':'none';
   sub.textContent=emailEnabled
-    ?'Add the email addresses that should get the 9 PM reminder. Each person gets their own email.'
+    ?'Add the email addresses that should get the daily 8 AM summary of yesterday. Each person gets their own email.'
     :'Add the addresses now. Emails will only be sent once the mail login (SMTP) is added to the server.';
 }
 async function testEmail(){

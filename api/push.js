@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import * as webpush from 'web-push';
-import { emailConfigured, getRecipients, sendReminderEmail } from './_email.js';
+import { buildSummary, emailConfigured, getRecipients, sendReminderEmail } from './_email.js';
 
 let lastTestEmail = 0;
 
@@ -36,14 +36,17 @@ export default async function handler(req, res) {
       if (body.action === 'test-email') {
         if (!emailConfigured()) return res.status(400).json({ error: 'email sending is not set up on the server yet' });
         if (Date.now() - lastTestEmail < 30000) return res.status(429).json({ error: 'wait a moment before sending another test' });
-        const to = await getRecipients(await getDB());
+        const sql = await getDB();
+        const to = await getRecipients(sql);
         if (!to.length) return res.status(400).json({ error: 'add an email address first' });
         lastTestEmail = Date.now();
         try {
+          const summary = await buildSummary(sql);
           const r = await sendReminderEmail({
             to,
+            summary,
             subject: 'Reminder email is on',
-            line: 'This is a test. If you forget to add your expenses, you will get an email like this at 9 PM.',
+            line: 'This is a test. You will get an email like this every day at 8 AM with a summary of yesterday.',
             path: '/?add=1'
           });
           return res.status(200).json({ ok: true, sent: r.sent, failed: r.failed });
@@ -84,7 +87,7 @@ export default async function handler(req, res) {
           { endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } },
           JSON.stringify({
             title: 'Reminder is on',
-            body: 'This is a test. If you forget to add your expenses, you will get a reminder like this at 9 PM.',
+            body: 'This is a test. If you forget to add yesterday’s expenses, you will get a reminder like this at 8 AM.',
             url: '/?add=1'
           })
         );
