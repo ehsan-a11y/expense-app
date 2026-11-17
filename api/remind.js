@@ -17,9 +17,10 @@ export async function processReminder(sql, query) {
   `;
   const hasExpense = found.length > 0;
   const needsReminder = force || !hasExpense;
-  // The morning slot emails a daily summary every day; pushes (and evening emails) only go out when the day is empty.
-  const sendEmail = slot === 'morning' || needsReminder;
-  if (!needsReminder && !sendEmail) return { status: 200, body: { ok: true, skipped: 'expense already added', slot, target } };
+  // Morning (8 AM): email summary every day. Evening (9 PM): phone push, only when today has no expense yet.
+  const sendEmail = slot === 'morning';
+  const sendPush = slot === 'evening' && needsReminder;
+  if (!sendEmail && !sendPush) return { status: 200, body: { ok: true, skipped: 'expense already added', slot, target } };
 
   const msg = slot === 'morning'
     ? { title: 'Don’t forget yesterday’s expenses', line: 'You didn’t add any expense yesterday.', body: 'You didn’t add any expense yesterday. Tap to add it now.', path: `/?add=1&date=${yesterday}` }
@@ -30,7 +31,7 @@ export async function processReminder(sql, query) {
 
   const result = { ok: true, slot, target, hasExpense, push: { sent: 0, removed: 0 }, email: 'not configured' };
 
-  const subs = needsReminder ? await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions` : [];
+  const subs = sendPush ? await sql`SELECT endpoint, p256dh, auth FROM push_subscriptions` : [];
   if (subs.length) {
     webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
     const payload = JSON.stringify({ title: msg.title, body: msg.body, url: msg.path, tag: 'expense-reminder' });

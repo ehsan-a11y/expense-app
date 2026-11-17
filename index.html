@@ -908,8 +908,8 @@ function resetLevels(){
   S.levels=null;saveS();renderLevelRows();toast('Levels set to automatic','ok');
 }
 // ─── DAILY REMINDER (web push) ────────────────────────────────────────────────
-var PUSH_ON_TXT='Reminder is on: once a day at 8 AM (UAE time), only if yesterday had no expense.';
-var PUSH_OFF_TXT='Get one notification at 8 AM (UAE time) if you did not add an expense the day before.';
+var PUSH_ON_TXT='Reminder is on: once a day at 9 PM (UAE time), only if you have not added an expense today.';
+var PUSH_OFF_TXT='Get one notification at 9 PM (UAE time) if you have not added an expense that day.';
 function pushSupported(){return'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
 function b64ToU8(s){
   var p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(b),out=new Uint8Array(raw.length);

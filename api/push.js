@@ -87,7 +87,7 @@ export default async function handler(req, res) {
           { endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } },
           JSON.stringify({
             title: 'Reminder is on',
-            body: 'This is a test. If you forget to add yesterday’s expenses, you will get a reminder like this at 8 AM.',
+            body: 'This is a test. If you forget to add today’s expenses, you will get a reminder like this at 9 PM.',
             url: '/?add=1'
           })
         );
