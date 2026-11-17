@@ -2,15 +2,20 @@ import { neon } from '@neondatabase/serverless';
 
 export const config = { api: { bodyParser: { sizeLimit: '1mb' } } };
 
+let tableReady = false;
+
 async function getDB() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
   const sql = neon(process.env.DATABASE_URL);
-  await sql`
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    )
-  `;
+  if (!tableReady) {
+    await sql`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `;
+    tableReady = true;
+  }
   return sql;
 }
 

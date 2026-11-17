@@ -4,21 +4,26 @@ export const config = {
   api: { bodyParser: { sizeLimit: '10mb' } }
 };
 
+let tableReady = false;
+
 async function getDB() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
   const sql = neon(process.env.DATABASE_URL);
-  await sql`
-    CREATE TABLE IF NOT EXISTS expense_records (
-      id        SERIAL PRIMARY KEY,
-      time      TEXT    NOT NULL,
-      type      TEXT    NOT NULL DEFAULT 'Expense',
-      amount    NUMERIC NOT NULL,
-      category  TEXT    NOT NULL,
-      account   TEXT    NOT NULL DEFAULT '—',
-      note      TEXT    NOT NULL DEFAULT '',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `;
+  if (!tableReady) {
+    await sql`
+      CREATE TABLE IF NOT EXISTS expense_records (
+        id        SERIAL PRIMARY KEY,
+        time      TEXT    NOT NULL,
+        type      TEXT    NOT NULL DEFAULT 'Expense',
+        amount    NUMERIC NOT NULL,
+        category  TEXT    NOT NULL,
+        account   TEXT    NOT NULL DEFAULT '—',
+        note      TEXT    NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+    tableReady = true;
+  }
   return sql;
 }
 

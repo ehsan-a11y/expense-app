@@ -523,6 +523,10 @@ body.dark .bottom-nav{background:#0f1724}
             <div><div class="s-lbl">Remind me to add expenses</div><div class="s-sub" id="pushSub"></div></div>
             <label class="toggle"><input type="checkbox" id="pushToggle" onchange="togglePush()"><span class="tog-sl"></span></label>
           </div>
+          <div class="s-row" id="emailTestRow" style="display:none">
+            <div><div class="s-lbl">Email reminder</div><div class="s-sub">The same reminder is also sent by email at 9 PM.</div></div>
+            <button class="s-btn s-green" onclick="testEmail()">Send test email</button>
+          </div>
           <div class="s-row" id="pushTestRow" style="display:none">
             <div class="s-lbl">Send a test notification</div>
             <button class="s-btn s-green" onclick="testPush()">Send test</button>
@@ -633,16 +637,17 @@ async function apiCall(url,opts){
 }
 async function init(){
   loadS();
-  await loadSRemote();
-  var remote=await apiCall('/api/records');
+  document.body.classList.toggle('dark',S.dark);
+  try{records=JSON.parse(localStorage.getItem(STORE)||'[]');}catch(e){records=[];}
+  if(records.length){applyUI();go('dashboard');}
+  var res=await Promise.all([loadSRemote(),apiCall('/api/records')]);
+  var remote=res[1];
   if(remote&&Array.isArray(remote)){
     records=remote;DB_OK=true;
     localStorage.setItem(STORE,JSON.stringify(records));
-  }else{
-    try{records=JSON.parse(localStorage.getItem(STORE)||'[]');}catch(e){records=[];}
-    if(!records.length)records=sample();
-  }
-  applyUI();go('dashboard');
+  }else if(!records.length)records=sample();
+  var cur=document.querySelector('.page.active');
+  applyUI();go(cur?cur.id.replace('page-',''):'dashboard');
   setSyncStatus(DB_OK?'ok':'err');
   startSyncLoop();
 }
@@ -904,9 +909,25 @@ function b64ToU8(s){
   for(var i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
   return out;
 }
+var emailEnabled=null;
+async function refreshEmailUI(){
+  var row=document.getElementById('emailTestRow');
+  if(!row)return;
+  if(emailEnabled===null){var k=await apiCall('/api/push');emailEnabled=!!(k&&k.emailEnabled);}
+  row.style.display=emailEnabled?'':'none';
+}
+async function testEmail(){
+  try{
+    var r=await fetch('/api/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test-email'})});
+    var j=await r.json().catch(function(){return{};});
+    if(r.ok)toast('Test email sent. Check your inbox','ok');
+    else toast(j.error?'Email failed: '+j.error:'Could not send the test email','err');
+  }catch(e){toast('Could not reach the server','err');}
+}
 async function refreshPushUI(){
   var sub=document.getElementById('pushSub'),tg=document.getElementById('pushToggle'),row=document.getElementById('pushTestRow');
   if(!tg)return;
+  refreshEmailUI();
   try{
     if(!pushSupported()){
       sub.textContent=/iphone|ipad/i.test(navigator.userAgent)?'On iPhone, add this app to your Home Screen first (Share, then Add to Home Screen) and open it from there.':'This browser does not support notifications.';

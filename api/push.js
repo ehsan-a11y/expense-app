@@ -1,5 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import * as webpush from 'web-push';
+import { emailConfigured, sendReminderEmail } from './_email.js';
+
+let lastTestEmail = 0;
 
 async function getDB() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
@@ -24,12 +27,30 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       if (!process.env.VAPID_PUBLIC_KEY) return res.status(500).json({ error: 'VAPID_PUBLIC_KEY not set' });
-      return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+      return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY, emailEnabled: emailConfigured() });
     }
 
     if (req.method === 'POST') {
-      const sql = await getDB();
       const body = req.body || {};
+
+      if (body.action === 'test-email') {
+        if (!emailConfigured()) return res.status(400).json({ error: 'email not configured' });
+        if (Date.now() - lastTestEmail < 30000) return res.status(429).json({ error: 'wait a moment before sending another test' });
+        lastTestEmail = Date.now();
+        try {
+          await sendReminderEmail({
+            subject: 'Reminder email is on',
+            line: 'This is a test. If you forget to add your expenses, you will get an email like this at 9 PM.',
+            path: '/?add=1'
+          });
+        } catch (err) {
+          console.error('test email failed', err.message);
+          return res.status(502).json({ error: err.message });
+        }
+        return res.status(200).json({ ok: true });
+      }
+
+      const sql = await getDB();
 
       if (body.action === 'subscribe') {
         const s = body.subscription;
