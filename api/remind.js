@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import * as webpush from 'web-push';
-import { emailConfigured, sendReminderEmail } from './_email.js';
+import { emailConfigured, getRecipients, sendReminderEmail } from './_email.js';
 
 const UTC_OFFSET_HOURS = 4; // Gulf Standard Time
 
@@ -65,7 +65,13 @@ export default async function handler(req, res) {
 
     if (emailConfigured()) {
       try {
-        result.email = `sent to ${await sendReminderEmail({ subject: msg.title, line: msg.line, path: msg.path })} recipient(s)`;
+        const to = await getRecipients(sql);
+        if (!to.length) {
+          result.email = 'no email addresses added';
+        } else {
+          const r = await sendReminderEmail({ to, subject: msg.title, line: msg.line, path: msg.path });
+          result.email = `sent ${r.sent}, failed ${r.failed}`;
+        }
       } catch (err) {
         console.error('email failed', err.message);
         result.email = 'failed: ' + err.message;

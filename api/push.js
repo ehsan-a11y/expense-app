@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import * as webpush from 'web-push';
-import { emailConfigured, sendReminderEmail } from './_email.js';
+import { emailConfigured, getRecipients, sendReminderEmail } from './_email.js';
 
 let lastTestEmail = 0;
 
@@ -34,20 +34,23 @@ export default async function handler(req, res) {
       const body = req.body || {};
 
       if (body.action === 'test-email') {
-        if (!emailConfigured()) return res.status(400).json({ error: 'email not configured' });
+        if (!emailConfigured()) return res.status(400).json({ error: 'email sending is not set up on the server yet' });
         if (Date.now() - lastTestEmail < 30000) return res.status(429).json({ error: 'wait a moment before sending another test' });
+        const to = await getRecipients(await getDB());
+        if (!to.length) return res.status(400).json({ error: 'add an email address first' });
         lastTestEmail = Date.now();
         try {
-          await sendReminderEmail({
+          const r = await sendReminderEmail({
+            to,
             subject: 'Reminder email is on',
             line: 'This is a test. If you forget to add your expenses, you will get an email like this at 9 PM.',
             path: '/?add=1'
           });
+          return res.status(200).json({ ok: true, sent: r.sent, failed: r.failed });
         } catch (err) {
           console.error('test email failed', err.message);
           return res.status(502).json({ error: err.message });
         }
-        return res.status(200).json({ ok: true });
       }
 
       const sql = await getDB();
