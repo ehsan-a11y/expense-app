@@ -789,7 +789,7 @@ function dashShift(delta){
   dashYM=nk===curYM()?null:nk;
   renderDash();
 }
-var monN=6;
+var monN=6,MON_COLORS=['#3498db','#e67e22','#2ecc71','#9b59b6','#1abc9c','#e74c3c','#f39c12','#16a085','#8e44ad','#2980b9','#d35400','#27ae60'];
 function setMonRange(n){
   monN=n;
   document.getElementById('mon-6').classList.toggle('active',n===6);
@@ -827,7 +827,7 @@ function renderMonthly(){
     var mon=new Date(x.y,x.m,1).toLocaleDateString('en-US',{month:'short'});
     bars+='<div class="mon-slot" title="'+mon+' '+x.y+': '+fmtAmt(v)+'" onclick="monDrill(\''+x.ym+'\')">'+
       '<span class="mon-val">'+lab(v)+'</span>'+
-      (v>0?'<div class="mon-bar" style="height:'+h.toFixed(1)+'px;background:'+(sel?'#2980b9':'#7fb3e0')+'"></div>':'')+'</div>';
+      (v>0?'<div class="mon-bar" style="height:'+h.toFixed(1)+'px;background:'+MON_COLORS[i%MON_COLORS.length]+(sel?';outline:2px solid '+MON_COLORS[i%MON_COLORS.length]+';outline-offset:2px':'')+'"></div>':'')+'</div>';
     labels+='<div class="mon-lbl">'+mon+((i===0||x.m===0||monN===6)?'<small>'+x.y+'</small>':'<small>&nbsp;</small>')+'</div>';
   });
   document.getElementById('monBars').innerHTML=bars;
