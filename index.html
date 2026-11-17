@@ -493,6 +493,17 @@ body.dark .bottom-nav{background:#0f1724}
           </div>
         </div>
         <div class="s-section">
+          <div class="s-sec-title">Daily Reminder</div>
+          <div class="s-row">
+            <div><div class="s-lbl">Remind me to add expenses</div><div class="s-sub" id="pushSub"></div></div>
+            <label class="toggle"><input type="checkbox" id="pushToggle" onchange="togglePush()"><span class="tog-sl"></span></label>
+          </div>
+          <div class="s-row" id="pushTestRow" style="display:none">
+            <div class="s-lbl">Send a test notification</div>
+            <button class="s-btn s-green" onclick="testPush()">Send test</button>
+          </div>
+        </div>
+        <div class="s-section">
           <div class="s-sec-title">Accounts</div>
           <div class="tags" id="accTags"></div>
           <div class="tag-add"><input type="text" id="accInput" placeholder="New account…" onkeydown="if(event.key==='Enter')addTag('acc')"><button class="tag-add-btn" onclick="addTag('acc')">+ Add</button></div>
@@ -617,7 +628,7 @@ function applyUI(){
   document.getElementById('sCurrency').value=S.currency;
   document.getElementById('sNumFmt').value=S.numFmt;
   document.getElementById('sSymPos').value=S.symPos;
-  renderTags('cat');renderTags('acc');renderBudgetRows();renderLevelRows();
+  renderTags('cat');renderTags('acc');renderBudgetRows();renderLevelRows();refreshPushUI();
 }
 function toggleDark(){S.dark=document.getElementById('darkToggle').checked;document.body.classList.toggle('dark',S.dark);saveS();toast('Theme updated','ok');}
 function saveCurr(){S.currency=document.getElementById('sCurrency').value;S.numFmt=document.getElementById('sNumFmt').value;S.symPos=document.getElementById('sSymPos').value;saveS();toast('Saved','ok');}
@@ -806,6 +817,60 @@ function saveLevels(){
 function resetLevels(){
   S.levels=null;saveS();renderLevelRows();toast('Levels set to automatic','ok');
 }
+// ─── DAILY REMINDER (web push) ────────────────────────────────────────────────
+var PUSH_ON_TXT='Reminder is on: once a day at 9 PM (UAE time), only if you have not added an expense today.';
+var PUSH_OFF_TXT='Get one notification at 9 PM (UAE time) if you have not added an expense that day.';
+function pushSupported(){return'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
+function b64ToU8(s){
+  var p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(b),out=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
+  return out;
+}
+async function refreshPushUI(){
+  var sub=document.getElementById('pushSub'),tg=document.getElementById('pushToggle'),row=document.getElementById('pushTestRow');
+  if(!tg)return;
+  try{
+    if(!pushSupported()){
+      sub.textContent=/iphone|ipad/i.test(navigator.userAgent)?'On iPhone, add this app to your Home Screen first (Share, then Add to Home Screen) and open it from there.':'This browser does not support notifications.';
+      tg.disabled=true;tg.checked=false;row.style.display='none';return;
+    }
+    if(Notification.permission==='denied'){
+      sub.textContent='Notifications are blocked. Allow them in your browser or phone settings.';
+      tg.disabled=true;tg.checked=false;row.style.display='none';return;
+    }
+    var reg=await navigator.serviceWorker.ready,cur=await reg.pushManager.getSubscription();
+    tg.disabled=false;tg.checked=!!cur;row.style.display=cur?'':'none';
+    sub.textContent=cur?PUSH_ON_TXT:PUSH_OFF_TXT;
+  }catch(e){sub.textContent='Reminders are unavailable right now.';tg.disabled=true;}
+}
+async function togglePush(){
+  var tg=document.getElementById('pushToggle');
+  try{
+    var reg=await navigator.serviceWorker.ready;
+    if(tg.checked){
+      if(await Notification.requestPermission()!=='granted'){toast('Notifications were not allowed','err');await refreshPushUI();return;}
+      var k=await apiCall('/api/push');
+      if(!k||!k.publicKey){tg.checked=false;toast('Could not reach the server','err');return;}
+      var s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(k.publicKey)});
+      var r=await apiCall('/api/push',{method:'POST',body:JSON.stringify({action:'subscribe',subscription:s.toJSON()})});
+      if(!r){await s.unsubscribe();tg.checked=false;toast('Could not save the reminder','err');return;}
+      toast('Daily reminder is on','ok');
+    }else{
+      var cur=await reg.pushManager.getSubscription();
+      if(cur){await apiCall('/api/push',{method:'POST',body:JSON.stringify({action:'unsubscribe',endpoint:cur.endpoint})});await cur.unsubscribe();}
+      toast('Daily reminder is off','ok');
+    }
+  }catch(e){tg.checked=!tg.checked;toast('Reminder setup failed: '+e.message,'err');}
+  refreshPushUI();
+}
+async function testPush(){
+  try{
+    var reg=await navigator.serviceWorker.ready,cur=await reg.pushManager.getSubscription();
+    if(!cur){toast('Turn the reminder on first','err');return;}
+    var r=await apiCall('/api/push',{method:'POST',body:JSON.stringify({action:'test',endpoint:cur.endpoint})});
+    toast(r?'Test notification sent':'Could not send the test','ok');
+  }catch(e){toast('Test failed: '+e.message,'err');}
+}
 function dailyLevel(v,max){
   if(!v)return DLY_LV.none;
   var lv=S.levels;
@@ -916,7 +981,7 @@ function buildChart(rows,fromDate,toDate){
     });
   } else {
     drawPie(ctx,W,H,labels,data,colors,isDark,chartType==='doughnut');
-    var cx=W*0.42,cy=H/2,r=Math.min(cx,cy)*0.82;
+    var pg=pieGeom(ctx,W,H,labels,data),cx=pg.cx,cy=pg.cy,r=pg.r;
     var total=data.reduce(function(s,v){return s+v;},0)||1;
     var ang=-Math.PI/2;
     data.forEach(function(v,i){
@@ -993,9 +1058,24 @@ function drawBar(ctx,W,H,labels,data,colors,isDark){
     ctx.fillText(lbl,x+barW/2,p.top+cH+16);
   });
 }
+function pieGeom(ctx,W,H,labels,data){
+  var n=Math.min(labels.length,10);
+  var two=(H-16)/n>=26;
+  var items=labels.slice(0,n).map(function(lbl,i){
+    var name=lbl.length>11?lbl.substring(0,10)+'…':lbl,val=fmtAmt(data[i]);
+    return{name:name,val:val,text:two?name:name+'  '+val};
+  });
+  ctx.font='10px sans-serif';
+  var mw=0;
+  items.forEach(function(it){mw=Math.max(mw,ctx.measureText(it.text).width,two?ctx.measureText(it.val).width:0);});
+  var lx=Math.max(W-mw-28,W*0.45);
+  var cx=lx/2,cy=H/2;
+  return{cx:cx,cy:cy,r:Math.min(cx,cy)*0.82,lx:lx,items:items,two:two,rh:two?30:Math.max(14,Math.min(18,(H-16)/n))};
+}
 function drawPie(ctx,W,H,labels,data,colors,isDark,isDoughnut){
   var total=data.reduce(function(s,v){return s+v;},0)||1;
-  var cx=W*0.42,cy=H/2,r=Math.min(cx,cy)*0.82;
+  var g=pieGeom(ctx,W,H,labels,data);
+  var cx=g.cx,cy=g.cy,r=g.r;
   var ang=-Math.PI/2;
   data.forEach(function(v,i){
     var slice=(v/total)*Math.PI*2;
@@ -1007,15 +1087,16 @@ function drawPie(ctx,W,H,labels,data,colors,isDark,isDoughnut){
     ctx.beginPath();ctx.arc(cx,cy,r*0.48,0,Math.PI*2);
     ctx.fillStyle=isDark?'#1e2736':'#fff';ctx.fill();
   }
-  var legendX=W*0.78,legendY=cy-(Math.min(labels.length,10)*18)/2;
-  labels.forEach(function(lbl,i){
-    if(i>9)return;
-    ctx.fillStyle=colors[i];ctx.fillRect(legendX-18,legendY-7,10,10);
+  var legendY=cy-(g.items.length*g.rh)/2+g.rh/2;
+  g.items.forEach(function(it,i){
+    ctx.fillStyle=colors[i];ctx.fillRect(g.lx,legendY-(g.two?10:5),10,10);
     ctx.fillStyle=isDark?'#e2e8f0':'#333';ctx.font='10px sans-serif';ctx.textAlign='left';
-    var pct=((data[i]/total)*100).toFixed(0)+'%';
-    var sh=lbl.length>11?lbl.substring(0,10)+'…':lbl;
-    ctx.fillText(sh+' '+pct,legendX-4,legendY+2);
-    legendY+=18;
+    if(g.two){
+      ctx.fillText(it.name,g.lx+16,legendY-4);
+      ctx.font='bold 10px sans-serif';
+      ctx.fillText(it.val,g.lx+16,legendY+8);
+    }else ctx.fillText(it.text,g.lx+16,legendY+3);
+    legendY+=g.rh;
   });
 }
 
@@ -1477,6 +1558,13 @@ function startSyncLoop(){
   },5000);
 }
 
-init();
+init().then(function(){
+  if(/[?&]add=1/.test(location.search)){
+    var dm=location.search.match(/[?&]date=(\d{4}-\d{2}-\d{2})/);
+    history.replaceState(null,'','/');
+    openModal();
+    if(dm){document.getElementById('fTime').value=dm[1];updateBudgetHint();}
+  }
+});
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
