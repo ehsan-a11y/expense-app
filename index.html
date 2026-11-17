@@ -52,6 +52,39 @@ body.dark .rec-bar{background:linear-gradient(90deg,#1a3a5e,#1e2736);border-colo
 .stat-sub{font-size:10px;color:rgba(255,255,255,.65)}
 #page-dashboard{overflow-y:auto}
 #page-budget{overflow-y:auto}
+#page-dashboard .cat-chart{min-height:320px}
+#page-dashboard .daily-card{flex:none}
+.dly-nav{display:flex;align-items:center;gap:6px}
+.dly-month{font-size:12px;font-weight:600;min-width:100px;text-align:center}
+.dly-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dly-tile{border-radius:10px;padding:9px 11px;min-width:0;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.dly-tile::before{content:"";position:absolute;top:-14px;right:-14px;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.14)}
+.dly-tile-lbl{font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;letter-spacing:.05em;position:relative}
+.dly-tile-val{font-size:15px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;position:relative}
+.dly-hint{font-size:11px;color:var(--ts)}
+.dly-dow,.dly-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.dly-dow div{text-align:center;font-size:10px;color:var(--tt);font-weight:600}
+.dly-cell{border-radius:8px;padding:5px 6px;height:52px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid transparent;min-width:0;overflow:hidden}
+.dly-cell.click{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.dly-cell.click:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.18)}
+.dly-cell.today{border:2px solid #185FA5}
+.dly-cell.future{background:var(--bs);border:1px dashed var(--bd);color:var(--tt);justify-content:flex-end}
+.dly-top{display:flex;justify-content:space-between;align-items:center;gap:2px}
+.dly-price{font-size:13px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;min-width:0}
+.dly-em{line-height:0;flex-shrink:0}
+.dly-em img{width:24px;height:24px;display:block}
+.dly-date{font-size:10px;line-height:1;white-space:nowrap}
+@media(max-width:768px){
+  .dly-cell{height:62px;padding:4px 2px;align-items:center;text-align:center}
+  .dly-top{flex-direction:column;align-items:center;gap:2px}
+  .dly-price{font-size:11px}
+  .dly-em img{width:18px;height:18px}
+  .dly-date{font-size:9px}
+  .dly-cell.future{height:40px}
+  .dly-tile{padding:8px}
+  .dly-tile-lbl{font-size:9px}
+  .dly-tile-val{font-size:13px}
+}
 .chart-card{background:var(--bp);border:1px solid var(--bd);border-radius:11px;padding:10px 14px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:6px}
 .chart-title{font-size:12px;font-weight:600}
@@ -215,6 +248,7 @@ body.dark .bi-status.over{background:#3a1a1a;color:#f87171}
 body.dark .budget-hint.ok{background:#16351f;color:#4ade80}
 body.dark .budget-hint.warn{background:#3a1a1a;color:#f87171}
 .ac-wrap{position:relative}
+.ac-wrap input{width:100%}
 .ac-list{display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--bp);border:1.5px solid #2980b9;border-radius:7px;max-height:170px;overflow-y:auto;z-index:500;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .ac-list.show{display:block}
 .ac-opt{padding:8px 10px;cursor:pointer;font-size:12px;color:var(--tp)}
@@ -316,7 +350,21 @@ body.dark .bottom-nav{background:#0f1724}
 
     <div class="page active" id="page-dashboard">
       <div class="stat-row" id="statRow"></div>
-      <div class="chart-card">
+      <div class="chart-card daily-card">
+        <div class="chart-hdr">
+          <span class="chart-title">Daily expenses</span>
+          <div class="dly-nav">
+            <button class="ctbtn" onclick="dailyShift(-1)" aria-label="Previous month">‹</button>
+            <span class="dly-month" id="dlyMonth"></span>
+            <button class="ctbtn" id="dlyNext" onclick="dailyShift(1)" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="dly-tiles" id="dlyTiles"></div>
+        <div class="dly-hint">Click a day to open its records</div>
+        <div class="dly-dow" id="dlyDow"></div>
+        <div class="dly-cal" id="dlyCal"></div>
+      </div>
+      <div class="chart-card cat-chart">
         <div class="chart-hdr">
           <span class="chart-title" id="chartTitle">Category breakdown</span>
           <div style="display:flex;align-items:center;gap:10px">
@@ -436,6 +484,15 @@ body.dark .bottom-nav{background:#0f1724}
           <div id="budgetRows"></div>
         </div>
         <div class="s-section">
+          <div class="s-sec-title">Daily Spending Levels</div>
+          <div class="s-sub" style="margin-bottom:6px">Sets the emoji for each day in the Dashboard calendar. Leave empty to decide automatically from the month's highest day.</div>
+          <div id="levelRows"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="s-btn s-green" onclick="saveLevels()">Save levels</button>
+            <button class="btn btn-rst" onclick="resetLevels()">Reset to automatic</button>
+          </div>
+        </div>
+        <div class="s-section">
           <div class="s-sec-title">Accounts</div>
           <div class="tags" id="accTags"></div>
           <div class="tag-add"><input type="text" id="accInput" placeholder="New account…" onkeydown="if(event.key==='Enter')addTag('acc')"><button class="tag-add-btn" onclick="addTag('acc')">+ Add</button></div>
@@ -495,7 +552,8 @@ var records=[],selRow=null,sortCol=null,sortDir=1,chartType='bar',chartHitAreas=
 var S={dark:false,currency:'$',numFmt:'2',symPos:'before',
   categories:[],
   accounts:[],
-  budgets:{}};
+  budgets:{},
+  levels:null};
 var RF={active:false,from:'',to:'',cat:'',label:''};
 
 function pad(n){return String(n).padStart(2,'0');}
@@ -511,8 +569,8 @@ function loadS(){
   localStorage.removeItem('expS_v1');localStorage.removeItem('expS_v2');
   try{var s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s)Object.assign(S,s);}catch(e){}
 }
-function saveS(){localStorage.setItem(SKEY,JSON.stringify(S));apiCall('/api/settings',{method:'POST',body:JSON.stringify({categories:S.categories,accounts:S.accounts,currency:S.currency,numFmt:S.numFmt,symPos:S.symPos,dark:S.dark,budgets:S.budgets||{}})});}
-async function loadSRemote(){var r=await apiCall('/api/settings');if(!r)return;if(Array.isArray(r.categories))S.categories=r.categories;if(Array.isArray(r.accounts))S.accounts=r.accounts;if(r.currency)S.currency=r.currency;if(r.numFmt)S.numFmt=r.numFmt;if(r.symPos)S.symPos=r.symPos;if(typeof r.dark==='boolean')S.dark=r.dark;if(r.budgets&&typeof r.budgets==='object')S.budgets=r.budgets;localStorage.setItem(SKEY,JSON.stringify(S));}
+function saveS(){localStorage.setItem(SKEY,JSON.stringify(S));apiCall('/api/settings',{method:'POST',body:JSON.stringify({categories:S.categories,accounts:S.accounts,currency:S.currency,numFmt:S.numFmt,symPos:S.symPos,dark:S.dark,budgets:S.budgets||{},levels:S.levels||null})});}
+async function loadSRemote(){var r=await apiCall('/api/settings');if(!r)return;if(Array.isArray(r.categories))S.categories=r.categories;if(Array.isArray(r.accounts))S.accounts=r.accounts;if(r.currency)S.currency=r.currency;if(r.numFmt)S.numFmt=r.numFmt;if(r.symPos)S.symPos=r.symPos;if(typeof r.dark==='boolean')S.dark=r.dark;if(r.budgets&&typeof r.budgets==='object')S.budgets=r.budgets;if('levels' in r)S.levels=(r.levels&&typeof r.levels==='object')?r.levels:null;localStorage.setItem(SKEY,JSON.stringify(S));}
 
 function sample(){return[
   {time:'2024-01-10',type:'Income',amount:5000,category:'Salary',account:'Bank',note:'January salary'},
@@ -559,7 +617,7 @@ function applyUI(){
   document.getElementById('sCurrency').value=S.currency;
   document.getElementById('sNumFmt').value=S.numFmt;
   document.getElementById('sSymPos').value=S.symPos;
-  renderTags('cat');renderTags('acc');renderBudgetRows();
+  renderTags('cat');renderTags('acc');renderBudgetRows();renderLevelRows();
 }
 function toggleDark(){S.dark=document.getElementById('darkToggle').checked;document.body.classList.toggle('dark',S.dark);saveS();toast('Theme updated','ok');}
 function saveCurr(){S.currency=document.getElementById('sCurrency').value;S.numFmt=document.getElementById('sNumFmt').value;S.symPos=document.getElementById('sSymPos').value;saveS();toast('Saved','ok');}
@@ -703,6 +761,108 @@ function renderDash(){
     mkStat('Balance',bal>=0?'c-purple':'c-red',fmtAmt(bal),'Net')+
     mkStat('Categories','c-teal',String(cats),'Unique');
   buildChart(rows,res.from,res.to);
+  renderDaily();
+}
+
+// ─── DAILY EXPENSES ───────────────────────────────────────────────────────────
+var dailyYM=null,dailyTotals=[],dailyCounts=[];
+function curYM(){var n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1);}
+function dailyShift(delta){
+  var p=(dailyYM||curYM()).split('-');
+  var d=new Date(+p[0],+p[1]-1+delta,1);
+  var nk=d.getFullYear()+'-'+pad(d.getMonth()+1);
+  if(nk>curYM())return;
+  dailyYM=nk===curYM()?null:nk;
+  renderDaily();
+}
+function dailyDayLabel(d){
+  var p=(dailyYM||curYM()).split('-');
+  return new Date(+p[0],+p[1]-1,d).toLocaleDateString('en-US',{day:'numeric',month:'short'});
+}
+var DLY_LV={
+  none:{bg:'#EAF3DE',fg:'#27500A',bd:'#97C459',c:'1f604',g:'😄',n:'No spend'},
+  low:{bg:'#C0DD97',fg:'#27500A',bd:'#C0DD97',c:'1f642',g:'🙂',n:'Low'},
+  med:{bg:'#FAC775',fg:'#633806',bd:'#FAC775',c:'1f610',g:'😐',n:'Medium'},
+  high:{bg:'#EF9F27',fg:'#412402',bd:'#EF9F27',c:'1f61f',g:'😟',n:'High'},
+  vhigh:{bg:'#E24B4A',fg:'#ffffff',bd:'#E24B4A',c:'1f525',g:'🔥',n:'Very high'}
+};
+function renderLevelRows(){
+  var el=document.getElementById('levelRows');
+  if(!el)return;
+  var lv=S.levels||{};
+  var inp='style="width:110px;padding:5px 9px;border:1px solid var(--bd);border-radius:5px;background:var(--bs);color:var(--tp);font-size:12px;font-family:inherit"';
+  function row(l,id){return'<div class="s-row"><div class="s-lbl">'+DLY_LV[l].g+' '+DLY_LV[l].n+' <span class="s-sub" style="display:inline">— up to</span></div><input type="number" min="0" step="0.01" id="'+id+'" value="'+(lv[l]||'')+'" placeholder="auto" '+inp+'></div>';}
+  el.innerHTML=row('low','lvLow')+row('med','lvMed')+row('high','lvHigh')+
+    '<div class="s-row"><div class="s-lbl">'+DLY_LV.vhigh.g+' '+DLY_LV.vhigh.n+' <span class="s-sub" style="display:inline">— above the High amount</span></div></div>';
+}
+function saveLevels(){
+  var low=parseFloat(document.getElementById('lvLow').value),med=parseFloat(document.getElementById('lvMed').value),high=parseFloat(document.getElementById('lvHigh').value);
+  if(isNaN(low)&&isNaN(med)&&isNaN(high)){resetLevels();return;}
+  if(!(low>0&&med>0&&high>0)){toast('Enter an amount for Low, Medium and High','err');return;}
+  if(!(low<med&&med<high)){toast('Amounts must increase: Low < Medium < High','err');return;}
+  S.levels={low:low,med:med,high:high};
+  saveS();toast('Spending levels saved','ok');
+}
+function resetLevels(){
+  S.levels=null;saveS();renderLevelRows();toast('Levels set to automatic','ok');
+}
+function dailyLevel(v,max){
+  if(!v)return DLY_LV.none;
+  var lv=S.levels;
+  if(lv&&lv.low>0&&lv.med>lv.low&&lv.high>lv.med)return v<=lv.low?DLY_LV.low:v<=lv.med?DLY_LV.med:v<=lv.high?DLY_LV.high:DLY_LV.vhigh;
+  var r=v/max;
+  return r<0.3?DLY_LV.low:r<0.55?DLY_LV.med:r<0.8?DLY_LV.high:DLY_LV.vhigh;
+}
+function dlyEmoji(l){
+  return'<span class="dly-em"><img src="https://fonts.gstatic.com/s/e/notoemoji/latest/'+l.c+'/512.gif" alt="" onerror="this.parentNode.textContent=\''+l.g+'\'"></span>';
+}
+function dailyDrill(d){
+  if(!dailyCounts[d-1])return;
+  var ym=dailyYM||curYM(),date=ym+'-'+pad(d);
+  drillTo('',date,date,dailyDayLabel(d)+' '+ym.split('-')[0]);
+}
+function renderDaily(){
+  var ym=dailyYM||curYM(),p=ym.split('-'),y=+p[0],m=+p[1];
+  var days=new Date(y,m,0).getDate();
+  var now=new Date(),isCur=ym===curYM();
+  var elapsed=isCur?now.getDate():days;
+  var totals=[],counts=[];for(var i=0;i<days;i++){totals.push(0);counts.push(0);}
+  records.forEach(function(r){
+    var t=String(r.time).split('T')[0];
+    if(t.substring(0,7)!==ym)return;
+    var di=+t.substring(8,10)-1;
+    counts[di]++;
+    if(r.type==='Expense')totals[di]+=parseFloat(r.amount||0);
+  });
+  dailyTotals=totals;dailyCounts=counts;
+  var total=totals.reduce(function(s,v){return s+v;},0);
+  var max=Math.max.apply(null,totals),maxDay=max>0?totals.indexOf(max)+1:0;
+  document.getElementById('dlyMonth').textContent=new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('dlyNext').style.opacity=isCur?'.35':'';
+  function tile(l,v,cls){return'<div class="dly-tile '+cls+'"><div class="dly-tile-lbl">'+l+'</div><div class="dly-tile-val">'+v+'</div></div>';}
+  document.getElementById('dlyTiles').innerHTML=
+    (isCur?tile('Today ('+dailyDayLabel(now.getDate())+')',fmtAmt(totals[now.getDate()-1]),'c-blue'):tile('Month total',fmtAmt(total),'c-blue'))+
+    tile('Daily average',fmtAmt(elapsed?total/elapsed:0),'c-teal')+
+    tile('Highest day'+(maxDay?' ('+dailyDayLabel(maxDay)+')':''),maxDay?fmtAmt(max):'—','c-red');
+  var narrow=window.innerWidth<=768;
+  function priceTxt(v){
+    if(narrow&&v>=1000)return(v/1000).toFixed(v>=10000?0:1).replace(/\.0$/,'')+'k';
+    return Math.round(v).toLocaleString('en-US');
+  }
+  document.getElementById('dlyDow').innerHTML=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(function(w){return'<div>'+w+'</div>';}).join('');
+  var cal='',lead=new Date(y,m-1,1).getDay();
+  for(var b=0;b<lead;b++)cal+='<div></div>';
+  for(var d=1;d<=days;d++){
+    var v=totals[d-1],future=isCur&&d>now.getDate(),today=isCur&&d===now.getDate();
+    var lbl=dailyDayLabel(d);
+    if(future){cal+='<div class="dly-cell future"><span class="dly-date">'+lbl+'</span></div>';continue;}
+    var l=dailyLevel(v,max),click=counts[d-1]>0;
+    cal+='<div class="dly-cell'+(click?' click':'')+(today?' today':'')+'" style="background:'+l.bg+';color:'+l.fg+';border-color:'+l.bd+'"'+
+      ' title="'+lbl+': '+fmtAmt(v)+'"'+(click?' onclick="dailyDrill('+d+')"':'')+'>'+
+      '<div class="dly-top"><span class="dly-price">'+priceTxt(v)+'</span>'+dlyEmoji(l)+'</div>'+
+      '<span class="dly-date">'+lbl+(today?' •':'')+'</span></div>';
+  }
+  document.getElementById('dlyCal').innerHTML=cal;
 }
 function mkStat(lbl,cls,val,sub){
   return'<div class="stat '+cls+'"><div class="stat-lbl">'+lbl+'</div><div class="stat-val">'+val+'</div><div class="stat-sub">'+sub+'</div></div>';
@@ -1270,7 +1430,7 @@ function renderComp(){
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(function(){t.classList.remove('show');},3800);}
-window.addEventListener('resize',function(){var pg=document.getElementById('page-dashboard');if(pg.classList.contains('active')){var res=getDashRows();buildChart(res.rows,res.from,res.to);}});
+window.addEventListener('resize',function(){var pg=document.getElementById('page-dashboard');if(pg.classList.contains('active')){var res=getDashRows();buildChart(res.rows,res.from,res.to);renderDaily();}});
 
 // ─── REAL-TIME SYNC ───────────────────────────────────────────────────────────
 var lastSyncTime=0,syncTimer=null;
