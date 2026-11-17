@@ -54,7 +54,18 @@ body.dark .rec-bar{background:linear-gradient(90deg,#1a3a5e,#1e2736);border-colo
 #page-budget{overflow-y:auto}
 #page-dashboard .cat-chart{min-height:320px}
 #page-dashboard .daily-card{flex:none}
+#page-dashboard .mon-card{flex:none}
+.mon-sum{font-size:11px;color:var(--ts)}
+.mon-bars{display:flex;align-items:flex-end;gap:8px;height:200px;border-bottom:1px solid var(--bd)}
+.mon-slot{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer}
+.mon-val{font-size:10px;font-weight:700;color:var(--tp);margin-bottom:3px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mon-bar{width:100%;max-width:64px;border-radius:5px 5px 0 0;transition:filter .15s}
+.mon-slot:hover .mon-bar{filter:brightness(.85)}
+.mon-labels{display:flex;gap:8px}
+.mon-lbl{flex:1;min-width:0;text-align:center;font-size:10px;color:var(--ts);line-height:1.3}
+.mon-lbl small{display:block;font-size:9px;color:var(--tt)}
 .dly-nav{display:flex;align-items:center;gap:6px}
+.topbar-right{display:flex;align-items:center;gap:12px}
 .dly-month{font-size:12px;font-weight:600;min-width:100px;text-align:center}
 .dly-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .dly-tile{border-radius:10px;padding:9px 11px;min-width:0;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12)}
@@ -313,7 +324,9 @@ body.dark .bottom-nav{background:#0f1724}
   .cf-div{display:none}
   .cf-grp{min-width:calc(50% - 8px)}
   /* topbar */
-  .topbar{padding:8px 12px}
+  .topbar{padding:8px 12px;gap:6px}
+  .topbar-right{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}
+  .topbar-right .dly-nav{order:3;width:100%;justify-content:flex-end}
   .topbar-title{font-size:13px}
 }
 </style>
@@ -339,7 +352,12 @@ body.dark .bottom-nav{background:#0f1724}
   <div class="content">
     <div class="topbar">
       <div><div class="topbar-title" id="pgTitle">Dashboard</div><div class="topbar-sub" id="pgSub">Overview of your expenses</div></div>
-      <div style="display:flex;align-items:center;gap:10px">
+      <div class="topbar-right">
+        <div class="dly-nav" id="dashPicker" style="display:none">
+          <button class="ctbtn" onclick="dashShift(-1)" aria-label="Previous month">‹</button>
+          <span class="dly-month" id="dashMonth"></span>
+          <button class="ctbtn" id="dashNext" onclick="dashShift(1)" aria-label="Next month">›</button>
+        </div>
         <div id="syncBadge" style="display:none;align-items:center;gap:4px;font-size:10px;color:var(--ts);background:var(--bs);border:1px solid var(--bd);padding:3px 8px;border-radius:20px">
           <span id="syncDot" style="width:6px;height:6px;border-radius:50%;background:#27ae60;flex-shrink:0"></span>
           <span id="syncLbl">Synced</span>
@@ -352,12 +370,7 @@ body.dark .bottom-nav{background:#0f1724}
       <div class="stat-row" id="statRow"></div>
       <div class="chart-card daily-card">
         <div class="chart-hdr">
-          <span class="chart-title">Daily expenses</span>
-          <div class="dly-nav">
-            <button class="ctbtn" onclick="dailyShift(-1)" aria-label="Previous month">‹</button>
-            <span class="dly-month" id="dlyMonth"></span>
-            <button class="ctbtn" id="dlyNext" onclick="dailyShift(1)" aria-label="Next month">›</button>
-          </div>
+          <span class="chart-title" id="dlyTitle">Daily expenses</span>
         </div>
         <div class="dly-tiles" id="dlyTiles"></div>
         <div class="dly-hint">Click a day to open its records</div>
@@ -370,13 +383,25 @@ body.dark .bottom-nav{background:#0f1724}
           <div style="display:flex;align-items:center;gap:10px">
             <span class="chart-hint">Click a bar to filter records</span>
             <div class="ctog">
-              <button class="ctbtn active" id="ct-bar" onclick="setChartType('bar')">▦ Bar</button>
+              <button class="ctbtn" id="ct-bar" onclick="setChartType('bar')">▦ Bar</button>
               <button class="ctbtn" id="ct-pie" onclick="setChartType('pie')">◕ Pie</button>
-              <button class="ctbtn" id="ct-doughnut" onclick="setChartType('doughnut')">◎ Doughnut</button>
+              <button class="ctbtn active" id="ct-doughnut" onclick="setChartType('doughnut')">◎ Doughnut</button>
             </div>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="catCanvas"></canvas></div>
+      </div>
+      <div class="chart-card mon-card">
+        <div class="chart-hdr">
+          <span class="chart-title" id="monTitle">Monthly expenses</span>
+          <div class="ctog">
+            <button class="ctbtn active" id="mon-6" onclick="setMonRange(6)">6 months</button>
+            <button class="ctbtn" id="mon-12" onclick="setMonRange(12)">12 months</button>
+          </div>
+        </div>
+        <div class="mon-sum" id="monSum"></div>
+        <div class="mon-bars" id="monBars"></div>
+        <div class="mon-labels" id="monLabels"></div>
       </div>
     </div>
 
@@ -559,7 +584,7 @@ body.dark .bottom-nav{background:#0f1724}
 'use strict';
 var STORE='exp_v2',SKEY='expS_v3';
 var CAT_COLORS=['#3498db','#e67e22','#2ecc71','#9b59b6','#1abc9c','#e74c3c','#f39c12','#34495e','#16a085','#8e44ad','#2980b9','#d35400'];
-var records=[],selRow=null,sortCol=null,sortDir=1,chartType='bar',chartHitAreas=[];
+var records=[],selRow=null,sortCol=null,sortDir=1,chartType='doughnut',chartHitAreas=[];
 var S={dark:false,currency:'$',numFmt:'2',symPos:'before',
   categories:[],
   accounts:[],
@@ -732,6 +757,7 @@ function go(page){
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('pgTitle').textContent=PAGE_INFO[page][0];
   document.getElementById('pgSub').textContent=PAGE_INFO[page][1];
+  document.getElementById('dashPicker').style.display=page==='dashboard'?'flex':'none';
   if(page==='dashboard')renderDash();
   else if(page==='records')applyFilters();
   else if(page==='comparison'){fillCatDrop();renderComp();}
@@ -748,16 +774,75 @@ function getDashRows(){
   var to=fmtD(now);
   return{rows:records.filter(function(r){var d=String(r.time).split('T')[0];return d>=from&&d<=to;}),from:from,to:to};
 }
+var dashYM=null;
+function dashData(){
+  var ym=dashYM||curYM(),p=ym.split('-'),y=+p[0],m=+p[1];
+  var from=ym+'-01',to=dashYM?ym+'-'+pad(new Date(y,m,0).getDate()):fmtD(new Date());
+  return{rows:records.filter(function(r){var d=String(r.time).split('T')[0];return d>=from&&d<=to;}),from:from,to:to,
+    label:new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'})};
+}
+function dashShift(delta){
+  var p=(dashYM||curYM()).split('-');
+  var d=new Date(+p[0],+p[1]-1+delta,1);
+  var nk=d.getFullYear()+'-'+pad(d.getMonth()+1);
+  if(nk>curYM())return;
+  dashYM=nk===curYM()?null:nk;
+  renderDash();
+}
+var monN=6;
+function setMonRange(n){
+  monN=n;
+  document.getElementById('mon-6').classList.toggle('active',n===6);
+  document.getElementById('mon-12').classList.toggle('active',n===12);
+  renderMonthly();
+}
+function monDrill(ym){
+  var p=ym.split('-'),y=+p[0],m=+p[1];
+  drillTo('',ym+'-01',ym+'-'+pad(new Date(y,m,0).getDate()),new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'}));
+}
+function renderMonthly(){
+  var end=(dashYM||curYM()).split('-'),ey=+end[0],em=+end[1];
+  var months=[],totals={};
+  for(var i=monN-1;i>=0;i--){
+    var d=new Date(ey,em-1-i,1),k=d.getFullYear()+'-'+pad(d.getMonth()+1);
+    months.push({ym:k,y:d.getFullYear(),m:d.getMonth()});totals[k]=0;
+  }
+  records.forEach(function(r){
+    if(r.type!=='Expense')return;
+    var k=String(r.time).split('T')[0].substring(0,7);
+    if(k in totals)totals[k]+=parseFloat(r.amount||0);
+  });
+  var vals=months.map(function(x){return totals[x.ym];});
+  var max=Math.max.apply(null,vals),sum=vals.reduce(function(s,v){return s+v;},0);
+  var narrow=window.innerWidth<=768&&monN>6;
+  function lab(v){
+    if(narrow&&v>=1000)return(v/1000).toFixed(v>=10000?0:1).replace(/\.0$/,'')+'k';
+    return Math.round(v).toLocaleString('en-US');
+  }
+  document.getElementById('monTitle').textContent='Monthly expenses — last '+monN+' months';
+  document.getElementById('monSum').textContent='Total '+fmtAmt(sum)+'  ·  Average '+fmtAmt(sum/monN)+' per month';
+  var bars='',labels='';
+  months.forEach(function(x,i){
+    var v=vals[i],h=v>0?Math.max(v/max*150,3):0,sel=i===months.length-1;
+    var mon=new Date(x.y,x.m,1).toLocaleDateString('en-US',{month:'short'});
+    bars+='<div class="mon-slot" title="'+mon+' '+x.y+': '+fmtAmt(v)+'" onclick="monDrill(\''+x.ym+'\')">'+
+      '<span class="mon-val">'+lab(v)+'</span>'+
+      (v>0?'<div class="mon-bar" style="height:'+h.toFixed(1)+'px;background:'+(sel?'#2980b9':'#7fb3e0')+'"></div>':'')+'</div>';
+    labels+='<div class="mon-lbl">'+mon+((i===0||x.m===0||monN===6)?'<small>'+x.y+'</small>':'<small>&nbsp;</small>')+'</div>';
+  });
+  document.getElementById('monBars').innerHTML=bars;
+  document.getElementById('monLabels').innerHTML=labels;
+}
 function setChartType(t){
   chartType=t;
-  document.querySelectorAll('.ctbtn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.cat-chart .ctbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('ct-'+t).classList.add('active');
-  var res=getDashRows();buildChart(res.rows,res.from,res.to);
+  var res=dashData();buildChart(res.rows,res.from,res.to);
 }
 function renderDash(){
-  var now=new Date();
-  var mName=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  var res=getDashRows();var rows=res.rows;
+  var res=dashData();var rows=res.rows,mName=res.label;
+  document.getElementById('dashMonth').textContent=mName;
+  document.getElementById('dashNext').style.opacity=dashYM?'':'.35';
   var total=rows.reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
   var inc=rows.filter(function(r){return r.type==='Income';}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
   var exp=rows.filter(function(r){return r.type==='Expense';}).reduce(function(s,r){return s+parseFloat(r.amount||0);},0);
@@ -773,21 +858,14 @@ function renderDash(){
     mkStat('Categories','c-teal',String(cats),'Unique');
   buildChart(rows,res.from,res.to);
   renderDaily();
+  renderMonthly();
 }
 
 // ─── DAILY EXPENSES ───────────────────────────────────────────────────────────
-var dailyYM=null,dailyTotals=[],dailyCounts=[];
+var dailyTotals=[],dailyCounts=[];
 function curYM(){var n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1);}
-function dailyShift(delta){
-  var p=(dailyYM||curYM()).split('-');
-  var d=new Date(+p[0],+p[1]-1+delta,1);
-  var nk=d.getFullYear()+'-'+pad(d.getMonth()+1);
-  if(nk>curYM())return;
-  dailyYM=nk===curYM()?null:nk;
-  renderDaily();
-}
 function dailyDayLabel(d){
-  var p=(dailyYM||curYM()).split('-');
+  var p=(dashYM||curYM()).split('-');
   return new Date(+p[0],+p[1]-1,d).toLocaleDateString('en-US',{day:'numeric',month:'short'});
 }
 var DLY_LV={
@@ -883,11 +961,11 @@ function dlyEmoji(l){
 }
 function dailyDrill(d){
   if(!dailyCounts[d-1])return;
-  var ym=dailyYM||curYM(),date=ym+'-'+pad(d);
+  var ym=dashYM||curYM(),date=ym+'-'+pad(d);
   drillTo('',date,date,dailyDayLabel(d)+' '+ym.split('-')[0]);
 }
 function renderDaily(){
-  var ym=dailyYM||curYM(),p=ym.split('-'),y=+p[0],m=+p[1];
+  var ym=dashYM||curYM(),p=ym.split('-'),y=+p[0],m=+p[1];
   var days=new Date(y,m,0).getDate();
   var now=new Date(),isCur=ym===curYM();
   var elapsed=isCur?now.getDate():days;
@@ -902,8 +980,7 @@ function renderDaily(){
   dailyTotals=totals;dailyCounts=counts;
   var total=totals.reduce(function(s,v){return s+v;},0);
   var max=Math.max.apply(null,totals),maxDay=max>0?totals.indexOf(max)+1:0;
-  document.getElementById('dlyMonth').textContent=new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  document.getElementById('dlyNext').style.opacity=isCur?'.35':'';
+  document.getElementById('dlyTitle').textContent='Daily expenses — '+new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
   function tile(l,v,cls){return'<div class="dly-tile '+cls+'"><div class="dly-tile-lbl">'+l+'</div><div class="dly-tile-val">'+v+'</div></div>';}
   document.getElementById('dlyTiles').innerHTML=
     (isCur?tile('Today ('+dailyDayLabel(now.getDate())+')',fmtAmt(totals[now.getDate()-1]),'c-blue'):tile('Month total',fmtAmt(total),'c-blue'))+
@@ -963,7 +1040,7 @@ function buildChart(rows,fromDate,toDate){
   var isDark=document.body.classList.contains('dark');
   var now=new Date();
   var fd=fromDate;var td=toDate;
-  var mName=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var mName=new Date(+fd.substring(0,4),+fd.substring(5,7)-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
   var capturedLabels=labels.slice();
 
   if(chartType==='bar'){
@@ -1058,11 +1135,15 @@ function drawBar(ctx,W,H,labels,data,colors,isDark){
     ctx.fillText(lbl,x+barW/2,p.top+cH+16);
   });
 }
+function fmtNum(v){
+  var dec=S.numFmt==='2'?2:0;
+  return(parseFloat(v)||0).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+}
 function pieGeom(ctx,W,H,labels,data){
   var n=Math.min(labels.length,10);
   var two=(H-16)/n>=26;
   var items=labels.slice(0,n).map(function(lbl,i){
-    var name=lbl.length>11?lbl.substring(0,10)+'…':lbl,val=fmtAmt(data[i]);
+    var name=lbl.length>11?lbl.substring(0,10)+'…':lbl,val=fmtNum(data[i]);
     return{name:name,val:val,text:two?name:name+'  '+val};
   });
   ctx.font='10px sans-serif';
@@ -1511,7 +1592,7 @@ function renderComp(){
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(function(){t.classList.remove('show');},3800);}
-window.addEventListener('resize',function(){var pg=document.getElementById('page-dashboard');if(pg.classList.contains('active')){var res=getDashRows();buildChart(res.rows,res.from,res.to);renderDaily();}});
+window.addEventListener('resize',function(){var pg=document.getElementById('page-dashboard');if(pg.classList.contains('active')){var res=dashData();buildChart(res.rows,res.from,res.to);renderDaily();renderMonthly();}});
 
 // ─── REAL-TIME SYNC ───────────────────────────────────────────────────────────
 var lastSyncTime=0,syncTimer=null;

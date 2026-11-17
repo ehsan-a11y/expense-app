@@ -26,7 +26,7 @@ self.addEventListener('push', e => {
   e.waitUntil(self.registration.showNotification(data.title || 'ExpenseApp', {
     body: data.body || '',
     icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    badge: '/badge-96.png',
     tag: data.tag || 'expense-reminder',
     data: { url: data.url || '/' }
   }));

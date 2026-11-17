@@ -58,7 +58,11 @@ export default async function handler(req, res) {
         const r = rows[0];
         await webpush.sendNotification(
           { endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } },
-          JSON.stringify({ title: 'ExpenseApp reminder', body: 'Test notification — reminders are working.', url: '/?add=1' })
+          JSON.stringify({
+            title: 'Reminder is on',
+            body: 'This is a test. If you forget to add your expenses, you will get a reminder like this at 9 PM.',
+            url: '/?add=1'
+          })
         );
         return res.status(200).json({ ok: true });
       }

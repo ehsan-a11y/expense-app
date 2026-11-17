@@ -39,8 +39,8 @@ export default async function handler(req, res) {
     }
 
     const msg = slot === 'morning'
-      ? { title: 'Add yesterday’s expenses', body: 'You didn’t add any expense yesterday. Tap to add them.', path: `/?add=1&date=${yesterday}` }
-      : { title: 'Add today’s expenses', body: 'You haven’t added any expense today. Tap to add one.', path: '/?add=1' };
+      ? { title: 'Don’t forget yesterday’s expenses', line: 'You didn’t add any expense yesterday.', body: 'You didn’t add any expense yesterday. Tap to add it now.', path: `/?add=1&date=${yesterday}` }
+      : { title: 'Don’t forget your expenses', line: 'You haven’t added any expense today.', body: 'You haven’t added any expense today. Tap to add it now.', path: '/?add=1' };
 
     const result = { ok: true, slot, target, push: { sent: 0, removed: 0 }, email: 'not configured' };
 
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
     if (emailConfigured()) {
       try {
-        result.email = `sent to ${await sendReminderEmail({ subject: msg.title, line: msg.body.replace(' Tap to add one.', '').replace(' Tap to add them.', ''), path: msg.path })} recipient(s)`;
+        result.email = `sent to ${await sendReminderEmail({ subject: msg.title, line: msg.line, path: msg.path })} recipient(s)`;
       } catch (err) {
         console.error('email failed', err.message);
         result.email = 'failed: ' + err.message;
