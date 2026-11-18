@@ -37,7 +37,7 @@ export async function processReminder(sql, query) {
     const payload = JSON.stringify({ title: msg.title, body: msg.body, url: msg.path, tag: 'expense-reminder' });
     for (const s of subs) {
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { urgency: 'high', TTL: 4 * 3600 });
         result.push.sent++;
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {

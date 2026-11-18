@@ -89,7 +89,8 @@ export default async function handler(req, res) {
             title: 'Reminder is on',
             body: 'This is a test. If you forget to add today’s expenses, you will get a reminder like this at 9 PM.',
             url: '/?add=1'
-          })
+          }),
+          { urgency: 'high', TTL: 3600 }
         );
         return res.status(200).json({ ok: true });
       }
